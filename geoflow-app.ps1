@@ -5,8 +5,7 @@
     Permet de creer, lister et gerer des instances d'applications GeoFlow
     Chaque app = 1 theme = 1 client avec Bootstrap + Leaflet
 .NOTES
-    Version: 1.0
-    Pre-requis: GeoFlow doit etre installe (geoflow-setup.ps1)
+    Version: 2.0 - Apps servies directement par NGINX
 #>
 
 #Requires -RunAsAdministrator
@@ -14,8 +13,8 @@
 param(
     [switch]$List,
     [switch]$Create,
-    [string]$Start,
-    [string]$Stop,
+    [string]$Enable,
+    [string]$Disable,
     [string]$Remove,
     [switch]$Menu
 )
@@ -102,9 +101,8 @@ function Get-AppsList {
                 $apps += [PSCustomObject]@{
                     Name = $folder.Name
                     Title = $config.theme.title
-                    Port = $config.server.port
                     Path = $folder.FullName
-                    Status = Test-AppRunning -AppName $folder.Name
+                    Enabled = $config.enabled
                 }
             } catch {
                 Write-Warning "Erreur lecture config de '$($folder.Name)': $_"
@@ -115,33 +113,10 @@ function Get-AppsList {
     return ,$apps
 }
 
-function Test-AppRunning {
-    param([string]$AppName)
-    
-    $appPath = Join-Path $script:APPS_DIR $AppName
-    $markerFile = Join-Path $appPath ".running"
-    
-    if (Test-Path $markerFile) {
-        try {
-            $pid = Get-Content $markerFile -ErrorAction SilentlyContinue
-            if ($pid -and (Get-Process -Id $pid -ErrorAction SilentlyContinue)) {
-                return "Running"
-            }
-        } catch {}
-    }
-    
-    return "Stopped"
-}
-
 function Show-AppsList {
     Write-Step "Liste des applications GeoFlow"
     
-    Write-Host "DEBUG: APPS_DIR = $script:APPS_DIR" -ForegroundColor Yellow
-    Write-Host "DEBUG: APPS_DIR existe = $(Test-Path $script:APPS_DIR)" -ForegroundColor Yellow
-    
     $apps = Get-AppsList
-    
-    Write-Host "DEBUG: Nombre d'apps trouvees = $($apps.Count)" -ForegroundColor Yellow
     
     if ($apps.Count -eq 0) {
         Write-Warning "Aucune application creee"
@@ -150,15 +125,15 @@ function Show-AppsList {
     }
     
     Write-Host "`n"
-    Write-Host "NOM".PadRight(20) "TITRE".PadRight(30) "PORT".PadRight(10) "STATUT" -ForegroundColor Cyan
+    Write-Host "NOM".PadRight(20) "TITRE".PadRight(40) "STATUT" -ForegroundColor Cyan
     Write-Host ("-" * 80) -ForegroundColor Cyan
     
     foreach ($app in $apps) {
-        $statusColor = if ($app.Status -eq "Running") { "Green" } else { "Gray" }
+        $statusColor = if ($app.Enabled) { "Green" } else { "Gray" }
+        $statusText = if ($app.Enabled) { "Active" } else { "Desactivee" }
         Write-Host $app.Name.PadRight(20) -NoNewline
-        Write-Host $app.Title.PadRight(30) -NoNewline
-        Write-Host $app.Port.ToString().PadRight(10) -NoNewline
-        Write-Host $app.Status -ForegroundColor $statusColor
+        Write-Host $app.Title.PadRight(40) -NoNewline
+        Write-Host $statusText -ForegroundColor $statusColor
     }
     
     Write-Host ""
@@ -190,15 +165,6 @@ function New-GeoFlowApp {
         $appTitle = $appName
     }
     
-    $existingPorts = (Get-AppsList).Port
-    $suggestedPort = 8000
-    while ($existingPorts -contains $suggestedPort) {
-        $suggestedPort++
-    }
-    
-    $portInput = Read-Host "Port HTTP (defaut: $suggestedPort)"
-    $port = if ([string]::IsNullOrWhiteSpace($portInput)) { $suggestedPort } else { [int]$portInput }
-    
     Write-ColorOutput "`n=== THEME VISUEL ===" "Cyan"
     $primaryColor = Read-Host "Couleur primaire (ex: #2563eb)"
     if ([string]::IsNullOrWhiteSpace($primaryColor)) { $primaryColor = "#2563eb" }
@@ -220,13 +186,13 @@ function New-GeoFlowApp {
     
     New-Item -ItemType Directory -Force -Path $appPath | Out-Null
     New-AppStructure -AppPath $appPath -AppName $appName -AppTitle $appTitle `
-        -Port $port -PrimaryColor $primaryColor -SecondaryColor $secondaryColor `
+        -PrimaryColor $primaryColor -SecondaryColor $secondaryColor `
         -CenterLat $centerLat -CenterLng $centerLng -Zoom $zoom
     
     Write-Success "Application '$appName' creee avec succes!"
-    Write-ColorOutput "`nPour demarrer l'application:" "Cyan"
-    Write-ColorOutput "  .\geoflow-apps.ps1 -Start $appName" "White"
-    Write-ColorOutput "  Ou utilisez le menu (option 3)" "White"
+    Write-ColorOutput "`nPour activer l'application:" "Cyan"
+    Write-ColorOutput "  .\geoflow-app.ps1 -Enable $appName" "White"
+    Write-ColorOutput "  Puis accessible sur: http://localhost/$appName/" "White"
 }
 
 function New-AppStructure {
@@ -234,7 +200,6 @@ function New-AppStructure {
         [string]$AppPath,
         [string]$AppName,
         [string]$AppTitle,
-        [int]$Port,
         [string]$PrimaryColor,
         [string]$SecondaryColor,
         [string]$CenterLat,
@@ -247,6 +212,7 @@ function New-AppStructure {
     New-Item -ItemType Directory -Force -Path "$AppPath\assets" | Out-Null
     
     $config = @{
+        enabled = $false
         theme = @{
             name = $AppName
             title = $AppTitle
@@ -262,9 +228,8 @@ function New-AppStructure {
             baseLayers = @("osm", "satellite")
         }
         server = @{
-            port = $Port
-            apiUrl = "http://localhost:3001/api"
-            tilesUrl = "http://localhost:7800"
+            apiUrl = "/api"
+            tilesUrl = "/tiles"
         }
         features = @{
             draw = $true
@@ -276,6 +241,7 @@ function New-AppStructure {
     
     $config | ConvertTo-Json -Depth 10 | Out-File -FilePath "$AppPath\config.json" -Encoding UTF8
     
+    # Mêmes fichiers HTML/CSS/JS que dans votre version originale
     $html = @"
 <!DOCTYPE html>
 <html lang="fr">
@@ -355,6 +321,7 @@ function New-AppStructure {
     
     [System.IO.File]::WriteAllText("$AppPath\index.html", $html, (New-Object System.Text.UTF8Encoding $false))
     
+    # CSS et JS identiques à votre version
     $themeCSS = @"
 :root {
     --primary-color: $PrimaryColor;
@@ -456,6 +423,7 @@ async function loadConfig() {
     
     $configJS | Out-File -FilePath "$AppPath\js\config.js" -Encoding UTF8 -NoNewline
     
+    # Tous les autres fichiers JS identiques...
     $mapJS = @"
 let map = null;
 let baseLayers = {};
@@ -636,70 +604,10 @@ init();
     
     $appJS | Out-File -FilePath "$AppPath\js\app.js" -Encoding UTF8 -NoNewline
     
-    $serverPS = @"
-`$port = $Port
-`$appPath = Split-Path -Parent `$MyInvocation.MyCommand.Path
-
-Write-Host "Demarrage de $AppTitle sur le port `$port..." -ForegroundColor Green
-Write-Host "URL: http://localhost:`$port" -ForegroundColor Cyan
-Write-Host "Appuyez sur Ctrl+C pour arreter" -ForegroundColor Yellow
-
-`$listener = New-Object System.Net.HttpListener
-`$listener.Prefixes.Add("http://localhost:`$port/")
-`$listener.Start()
-
-`$pidFile = Join-Path `$appPath ".running"
-`$PID | Out-File -FilePath `$pidFile -Encoding UTF8
-
-try {
-    while (`$listener.IsListening) {
-        `$context = `$listener.GetContext()
-        `$request = `$context.Request
-        `$response = `$context.Response
-        
-        `$path = `$request.Url.LocalPath
-        if (`$path -eq '/') { `$path = '/index.html' }
-        
-        `$filePath = Join-Path `$appPath `$path.TrimStart('/')
-        
-        if (Test-Path `$filePath) {
-            `$content = [System.IO.File]::ReadAllBytes(`$filePath)
-            `$response.ContentLength64 = `$content.Length
-            
-            `$ext = [System.IO.Path]::GetExtension(`$filePath)
-            `$contentType = switch (`$ext) {
-                '.html' { 'text/html' }
-                '.css' { 'text/css' }
-                '.js' { 'application/javascript' }
-                '.json' { 'application/json' }
-                '.png' { 'image/png' }
-                '.jpg' { 'image/jpeg' }
-                default { 'application/octet-stream' }
-            }
-            `$response.ContentType = `$contentType
-            
-            `$response.OutputStream.Write(`$content, 0, `$content.Length)
-        } else {
-            `$response.StatusCode = 404
-            `$html = '<h1>404 Not Found</h1>'
-            `$buffer = [System.Text.Encoding]::UTF8.GetBytes(`$html)
-            `$response.OutputStream.Write(`$buffer, 0, `$buffer.Length)
-        }
-        
-        `$response.Close()
-    }
-} finally {
-    `$listener.Stop()
-    Remove-Item `$pidFile -ErrorAction SilentlyContinue
-}
-"@
-    
-    $serverPS | Out-File -FilePath "$AppPath\server.ps1" -Encoding UTF8 -NoNewline
-    
     Write-Success "Structure de l'application creee"
 }
 
-function Start-App {
+function Enable-App {
     param([string]$AppName)
     
     $appPath = Join-Path $script:APPS_DIR $AppName
@@ -709,56 +617,35 @@ function Start-App {
         return
     }
     
-    if ((Test-AppRunning -AppName $AppName) -eq "Running") {
-        Write-Warning "L'application '$AppName' est deja demarree"
-        return
-    }
-    
-    $serverScript = Join-Path $appPath "server.ps1"
     $configFile = Join-Path $appPath "config.json"
     $config = Get-Content $configFile -Raw | ConvertFrom-Json
+    $config.enabled = $true
+    $config | ConvertTo-Json -Depth 10 | Out-File -FilePath $configFile -Encoding UTF8
     
-    Write-Step "Demarrage de l'application '$AppName'..."
-    
-    # Démarrer le serveur
-    Start-Process powershell -ArgumentList "-NoExit", "-File", $serverScript -WorkingDirectory $appPath
-    
-    Start-Sleep -Seconds 2
-    
-    # Mettre à jour NGINX
     Update-NginxConfig
     
-    Write-Success "Application demarree!"
-    Write-ColorOutput "`nAcces via NGINX:" "Cyan"
-    Write-ColorOutput "  http://localhost/$AppName" "White"
-    Write-ColorOutput "`nAcces direct (port):" "Cyan"
-    Write-ColorOutput "  http://localhost:$($config.server.port)" "White"
-    Write-ColorOutput "`nFenetre PowerShell ouverte avec les logs" "Yellow"
+    Write-Success "Application '$AppName' activee"
+    Write-ColorOutput "URL: http://localhost/$AppName/" "Cyan"
 }
 
-function Stop-App {
+function Disable-App {
     param([string]$AppName)
     
     $appPath = Join-Path $script:APPS_DIR $AppName
-    $markerFile = Join-Path $appPath ".running"
     
-    if (-not (Test-Path $markerFile)) {
-        Write-Warning "L'application '$AppName' n'est pas demarree"
+    if (-not (Test-Path $appPath)) {
+        Write-Error "Application '$AppName' introuvable"
         return
     }
     
-    try {
-        $pid = Get-Content $markerFile
-        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-        Remove-Item $markerFile -ErrorAction SilentlyContinue
-        
-        # Mettre à jour NGINX
-        Update-NginxConfig
-        
-        Write-Success "Application '$AppName' arretee"
-    } catch {
-        Write-Warning "Impossible d'arreter l'application"
-    }
+    $configFile = Join-Path $appPath "config.json"
+    $config = Get-Content $configFile -Raw | ConvertFrom-Json
+    $config.enabled = $false
+    $config | ConvertTo-Json -Depth 10 | Out-File -FilePath $configFile -Encoding UTF8
+    
+    Update-NginxConfig
+    
+    Write-Success "Application '$AppName' desactivee"
 }
 
 function Update-NginxConfig {
@@ -771,26 +658,28 @@ function Update-NginxConfig {
     
     Write-Step "Mise a jour de la configuration NGINX..."
     
-    # Récupérer toutes les apps actives
-    $apps = Get-AppsList
-    $runningApps = $apps | Where-Object { $_.Status -eq "Running" }
+    $apps = Get-AppsList | Where-Object { $_.Enabled -eq $true }
     
-    # Générer les blocs location pour chaque app
+    # Construire les blocs location pour chaque app
     $locationBlocks = ""
-    foreach ($app in $runningApps) {
+    foreach ($app in $apps) {
+        $appPathInContainer = "/usr/share/nginx/html/apps/$($app.Name)"
         $locationBlocks += @"
 
         location /$($app.Name)/ {
-            proxy_pass http://host.docker.internal:$($app.Port)/;
-            proxy_set_header Host `$host;
-            proxy_set_header X-Real-IP `$remote_addr;
-            proxy_set_header X-Forwarded-For `$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto `$scheme;
+            alias $appPathInContainer/;
+            index index.html;
+            try_files `$uri `$uri/ /index.html;
+            
+            # Headers pour le cache des assets statiques
+            location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
         }
 "@
     }
     
-    # Lire le template NGINX
     $nginxConf = @"
 worker_processes auto;
 error_log /var/log/nginx/error.log warn;
@@ -889,12 +778,11 @@ $locationBlocks
 }
 "@
     
-    # Écrire la nouvelle config
     [System.IO.File]::WriteAllText($nginxConfPath, $nginxConf, (New-Object System.Text.UTF8Encoding $false))
     
-    Write-Success "Fichier nginx.conf mis a jour avec $($runningApps.Count) app(s)"
+    Write-Success "Configuration NGINX mise a jour avec $($apps.Count) app(s)"
     
-    # Recharger NGINX dans Docker
+    # Recharger NGINX
     try {
         $installPath = $script:GEOFLOW_INSTALL_PATH
         Set-Location $installPath
@@ -902,7 +790,8 @@ $locationBlocks
         docker exec geoflow_nginx nginx -s reload
         Write-Success "NGINX recharge avec succes"
     } catch {
-        Write-Warning "Redemarrez NGINX avec: .\geoflow-setup.ps1 -Stop puis -Start"
+        Write-Warning "Erreur lors du rechargement NGINX: $_"
+        Write-ColorOutput "Redemarrez manuellement: docker restart geoflow_nginx" "Yellow"
     }
 }
 
@@ -920,7 +809,7 @@ function Remove-App {
     $confirm = Read-Host "Confirmer la suppression? (oui/non)"
     
     if ($confirm -eq 'oui') {
-        Stop-App -AppName $AppName
+        Disable-App -AppName $AppName
         Remove-Item -Path $appPath -Recurse -Force
         Write-Success "Application supprimee"
     } else {
@@ -941,8 +830,8 @@ function Show-Menu {
     
     Write-ColorOutput "1. Creer une nouvelle application" "White"
     Write-ColorOutput "2. Lister les applications" "White"
-    Write-ColorOutput "3. Demarrer une application" "White"
-    Write-ColorOutput "4. Arreter une application" "White"
+    Write-ColorOutput "3. Activer une application" "White"
+    Write-ColorOutput "4. Desactiver une application" "White"
     Write-ColorOutput "5. Supprimer une application" "White"
     Write-ColorOutput "6. Ouvrir le repertoire d'une application" "White"
     Write-ColorOutput "Q. Quitter" "White"
@@ -953,11 +842,7 @@ function Show-Menu {
 function Select-App {
     param([string]$Action)
     
-    Write-Host "DEBUG: Appel de Get-AppsList depuis Select-App..." -ForegroundColor Yellow
     $apps = Get-AppsList
-    
-    Write-Host "DEBUG: apps.Count = $($apps.Count)" -ForegroundColor Yellow
-    Write-Host "DEBUG: apps type = $($apps.GetType().Name)" -ForegroundColor Yellow
     
     if ($apps.Count -eq 0) {
         Write-Warning "Aucune application disponible"
@@ -966,19 +851,19 @@ function Select-App {
     
     Write-ColorOutput "`n=== $Action ===" "Cyan"
     Write-Host ""
-    Write-Host "  #  " "NOM".PadRight(20) "TITRE".PadRight(30) "PORT".PadRight(10) "STATUT" -ForegroundColor Cyan
-    Write-Host "  " + ("-" * 75) -ForegroundColor Gray
+    Write-Host "  #  " "NOM".PadRight(20) "TITRE".PadRight(40) "STATUT" -ForegroundColor Cyan
+    Write-Host "  " + ("-" * 80) -ForegroundColor Gray
     
     for ($i = 0; $i -lt $apps.Count; $i++) {
         $num = ($i + 1).ToString().PadLeft(3)
-        $statusColor = if ($apps[$i].Status -eq "Running") { "Green" } else { "Gray" }
-        $statusIcon = if ($apps[$i].Status -eq "Running") { "●" } else { "○" }
+        $statusColor = if ($apps[$i].Enabled) { "Green" } else { "Gray" }
+        $statusIcon = if ($apps[$i].Enabled) { "●" } else { "○" }
+        $statusText = if ($apps[$i].Enabled) { "Active" } else { "Desactivee" }
         
         Write-Host "  $num " -NoNewline -ForegroundColor Yellow
         Write-Host $apps[$i].Name.PadRight(20) -NoNewline
-        Write-Host $apps[$i].Title.PadRight(30) -NoNewline
-        Write-Host $apps[$i].Port.ToString().PadRight(10) -NoNewline
-        Write-Host "$statusIcon $($apps[$i].Status)" -ForegroundColor $statusColor
+        Write-Host $apps[$i].Title.PadRight(40) -NoNewline
+        Write-Host "$statusIcon $statusText" -ForegroundColor $statusColor
     }
     
     Write-Host ""
@@ -1016,7 +901,7 @@ function Open-AppDirectory {
 try {
     Initialize-AppsDirectory
     
-    if (-not ($List -or $Create -or $Start -or $Stop -or $Remove)) {
+    if (-not ($List -or $Create -or $Enable -or $Disable -or $Remove)) {
         $Menu = $true
     }
     
@@ -1035,16 +920,16 @@ try {
                     Wait-UserConfirmation
                 }
                 '3' {
-                    $app = Select-App -Action "Demarrer une application"
+                    $app = Select-App -Action "Activer une application"
                     if ($app) {
-                        Start-App -AppName $app.Name
+                        Enable-App -AppName $app.Name
                     }
                     Wait-UserConfirmation
                 }
                 '4' {
-                    $app = Select-App -Action "Arreter une application"
+                    $app = Select-App -Action "Desactiver une application"
                     if ($app) {
-                        Stop-App -AppName $app.Name
+                        Disable-App -AppName $app.Name
                     }
                     Wait-UserConfirmation
                 }
@@ -1075,8 +960,8 @@ try {
     } else {
         if ($List) { Show-AppsList }
         if ($Create) { New-GeoFlowApp }
-        if ($Start) { Start-App -AppName $Start }
-        if ($Stop) { Stop-App -AppName $Stop }
+        if ($Enable) { Enable-App -AppName $Enable }
+        if ($Disable) { Disable-App -AppName $Disable }
         if ($Remove) { Remove-App -AppName $Remove }
     }
     

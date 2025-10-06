@@ -382,14 +382,15 @@ services:
       - geoflow_network
 
   nginx:
-    image: nginx:$NGINX_VERSION
+    image: nginx:alpine
     container_name: geoflow_nginx
     restart: unless-stopped
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/cache:/var/cache/nginx
+      - ./apps:/usr/share/nginx/html/apps:ro
     ports:
-      - "`${NGINX_HTTP_PORT}:80"
+      - "$`{NGINX_HTTP_PORT}:80"
     depends_on:
       - backend
       - pg_tileserv
