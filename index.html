@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoFlow</title>
+    
+    <!-- External CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    
+    <!-- Application CSS -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <button class="tool-btn" id="btn-layers">
+            <i class="bi bi-layers"></i>
+            <span class="tooltip-custom tooltip-bottom">Couches</span>
+        </button>
+        <button class="tool-btn" id="btn-legend">
+            <i class="bi bi-palette"></i>
+            <span class="tooltip-custom tooltip-bottom">Légende</span>
+        </button>
+        <button class="tool-btn" id="btn-draw">
+            <i class="bi bi-pencil"></i>
+            <span class="tooltip-custom tooltip-bottom">Dessiner</span>
+        </button>
+        <button class="tool-btn" id="btn-measure">
+            <i class="bi bi-rulers"></i>
+            <span class="tooltip-custom tooltip-bottom">Mesurer</span>
+        </button>
+        <button class="tool-btn" id="btn-tools">
+            <i class="bi bi-gear"></i>
+            <span class="tooltip-custom tooltip-bottom">Outils</span>
+        </button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <div class="search-input-wrapper">
+            <input type="text" class="search-input" id="search-input" placeholder="Rechercher un lieu...">
+            <i class="bi bi-search search-icon"></i>
+        </div>
+        <div class="search-results" id="search-results"></div>
+    </div>
+
+    <!-- Panel -->
+    <div class="panel" id="panel">
+        <div class="panel-header">
+            <h5 class="panel-title" id="panel-title">Panneau</h5>
+            <button class="panel-close" id="panel-close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="panel-content" id="panel-content"></div>
+    </div>
+
+    <!-- Legend Widget -->
+    <div class="legend-widget" id="legend-widget">
+        <div class="legend-widget-header">
+            <div class="legend-widget-title">Légende</div>
+            <button class="legend-widget-close" id="legend-widget-close">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        <div class="legend-widget-content" id="legend-widget-content">
+            <div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.8rem;">
+                Aucune couche active
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+        <button class="action-btn" id="btn-locate">
+            <i class="bi bi-crosshair"></i>
+            <span class="tooltip-custom tooltip-left">Ma position</span>
+        </button>
+        <button class="action-btn" id="btn-fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+            <span class="tooltip-custom tooltip-left">Plein écran</span>
+        </button>
+        <button class="action-btn" id="btn-home">
+            <i class="bi bi-house"></i>
+            <span class="tooltip-custom tooltip-left">Vue initiale</span>
+        </button>
+        <button class="action-btn" id="btn-basemap">
+            <img src="https://a.tile.openstreetmap.org/8/129/90.png" alt="Basemap" id="basemap-preview">
+            <span class="tooltip-custom tooltip-left">Fonds de carte</span>
+        </button>
+    </div>
+
+    <!-- Basemap Gallery -->
+    <div class="basemap-gallery" id="basemap-gallery">
+        <div class="basemap-item active" data-basemap="osm">
+            <img src="assets/osm.png" alt="OSM">
+            <span class="tooltip-custom tooltip-top">OpenStreetMap</span>
+        </div>
+        <div class="basemap-item" data-basemap="satellite">
+            <img src="assets/satellite.png" alt="Satellite">
+            <span class="tooltip-custom tooltip-top">Satellite</span>
+        </div>
+        <div class="basemap-item" data-basemap="topo">
+            <img src="assets/topo.png" alt="Topo">
+            <span class="tooltip-custom tooltip-top">Topographique</span>
+        </div>
+        <div class="basemap-item" data-basemap="positron">
+            <img src="assets/positron.png" alt="Positron">
+            <span class="tooltip-custom tooltip-top">Positron</span>
+        </div>
+        <div class="basemap-item" data-basemap="darkmatter">
+            <img src="assets/dark.png" alt="Dark Matter">
+            <span class="tooltip-custom tooltip-top">Dark Matter</span>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Loading -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/layers.js"></script>
+    <script src="js/draw.js"></script>
+    <script src="js/measure.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/basemap.js"></script>
+    <script src="js/panels.js"></script>
+    <script src="js/tools.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
