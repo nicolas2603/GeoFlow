@@ -1,7 +1,7 @@
 {
   "theme": {
     "name": "default",
-    "title": "GeoFlow WebSIG - Montpellier",
+    "title": "Test",
     "colors": {
       "primary": "#2563eb",
       "secondary": "#0ea5e9"
@@ -10,43 +10,48 @@
   },
   "map": {
     "center": [43.6108, 3.8767],
-    "zoom": 12,
+    "zoom": 10,
     "minZoom": 3,
     "maxZoom": 19,
     "baseLayers": {
       "osm": {
         "name": "OpenStreetMap",
         "icon": "bi-map",
-        "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "attribution": "© OpenStreetMap contributors",
+        "url": "assets/osm.png",
+		"preview": "assets/osm.png",
+        "attribution": "© OpenStreetMap",
         "maxZoom": 19,
         "default": true
       },
       "satellite": {
         "name": "Satellite",
         "icon": "bi-globe",
-        "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        "url": "assets/satellite.png",
+        "preview": "assets/satellite.png",
         "attribution": "© Esri",
         "maxZoom": 19
       },
       "topo": {
         "name": "Topographique",
         "icon": "bi-mountain",
-        "url": "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-        "attribution": "© OpenTopoMap contributors",
+        "url": "assets/topo.png",
+        "preview": "assets/topo.png",
+        "attribution": "© OpenTopoMap",
         "maxZoom": 17
       },
       "positron": {
         "name": "Positron",
         "icon": "bi-map",
-        "url": "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "url": "assets/positron.png",
+        "preview": "assets/positron.png",
         "attribution": "© CARTO",
         "maxZoom": 19
       },
       "darkmatter": {
         "name": "Dark Matter",
         "icon": "bi-map-fill",
-        "url": "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+        "url": "assets/dark.png",
+        "preview": "assets/dark.png",
         "attribution": "© CARTO",
         "maxZoom": 19
       }
@@ -152,7 +157,6 @@
   "features": {
     "draw": true,
     "search": true,
-    "filters": true,
     "export": true,
     "measure": true,
     "print": true

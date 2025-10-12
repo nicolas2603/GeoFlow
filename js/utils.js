@@ -8,14 +8,16 @@ const GeoFlowUtils = {
      * Show loading spinner
      */
     showLoading() {
-        document.getElementById('loading').classList.add('active');
+        const loading = document.getElementById('loading');
+        loading.classList.add('active');
     },
 
     /**
      * Hide loading spinner
      */
     hideLoading() {
-        document.getElementById('loading').classList.remove('active');
+        const loading = document.getElementById('loading');
+        loading.classList.remove('active');
     },
 
     /**

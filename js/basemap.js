@@ -8,6 +8,9 @@ const GeoFlowBasemap = {
      * Initialize basemap controls
      */
     init() {
+        // Generate basemap gallery from config
+        this.generateGallery();
+
         // Toggle gallery
         document.getElementById('btn-basemap').addEventListener('click', () => {
             this.toggleGallery();
@@ -22,8 +25,36 @@ const GeoFlowBasemap = {
                 gallery.classList.remove('active');
             }
         });
+    },
 
-        // Basemap selection
+    /**
+     * Generate basemap gallery from configuration
+     */
+    generateGallery() {
+        const gallery = document.getElementById('basemap-gallery');
+        const baseLayers = GeoFlowConfig.map.baseLayers;
+        
+        let html = '';
+        Object.entries(baseLayers).forEach(([key, config]) => {
+            const isDefault = config.default ? 'active' : '';
+            html += `
+                <div class="basemap-item ${isDefault}" data-basemap="${key}">
+                    <img src="${config.preview}" alt="${config.name}">
+                    <span class="tooltip-custom tooltip-top">${config.name}</span>
+                </div>
+            `;
+        });
+        
+        gallery.innerHTML = html;
+
+        // Set preview image for default basemap
+        const defaultBasemap = Object.entries(baseLayers).find(([, config]) => config.default);
+        if (defaultBasemap) {
+            const previewImg = document.getElementById('basemap-preview');
+            previewImg.src = defaultBasemap[1].preview;
+        }
+
+        // Attach click listeners
         document.querySelectorAll('.basemap-item').forEach(item => {
             item.addEventListener('click', () => {
                 const basemapType = item.dataset.basemap;

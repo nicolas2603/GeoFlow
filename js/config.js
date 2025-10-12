@@ -1,14 +1,36 @@
 /**
  * GeoFlow Configuration Module
+ * Default configuration and runtime config storage
+ * Actual configuration should be loaded from config.json
  */
 
 const GeoFlowConfig = {
-    // Map configuration
+    // App configuration (loaded from config.json)
+    app: {
+        title: 'GeoFlow',
+        version: '1.0'
+    },
+
+    // Theme configuration (loaded from config.json)
+    theme: {},
+
+    // Map configuration (default values, overridden by config.json)
     map: {
         center: [43.6108, 3.8767],
         zoom: 10,
         minZoom: 3,
-        maxZoom: 19
+        maxZoom: 19,
+        baseLayers: {
+            // Default fallback if config.json not available
+            osm: {
+                name: 'OpenStreetMap',
+                url: 'assets/osm.png',
+				preview: 'assets/osm.png',
+                attribution: '© OpenStreetMap',
+                maxZoom: 19,
+                default: true
+            }
+        }
     },
 
     // API endpoints
@@ -17,7 +39,10 @@ const GeoFlowConfig = {
         nominatim: 'https://nominatim.openstreetmap.org'
     },
 
-    // Legend definitions
+    // Layers configuration (loaded from config.json)
+    layersConfig: {},
+
+    // Legend definitions (loaded from config.json or defaults)
     legends: {
         'points': {
             type: 'categorized',
@@ -26,21 +51,13 @@ const GeoFlowConfig = {
                 { symbol: 'point', color: '#3498db', label: 'Culture' },
                 { symbol: 'point', color: '#2ecc71', label: 'Parc' },
                 { symbol: 'point', color: '#f39c12', label: 'Transport' }
-            ],
-            metadata: {
-                source: 'OpenStreetMap',
-                date: '2024'
-            }
+            ]
         },
         'zones': {
             type: 'simple',
             items: [
                 { symbol: 'polygon', color: '#2563eb', label: 'Centre-ville' }
-            ],
-            metadata: {
-                source: 'IGN',
-                date: '2024'
-            }
+            ]
         },
         'natura2000': {
             type: 'categorized',
@@ -49,12 +66,7 @@ const GeoFlowConfig = {
                 { symbol: 'polygon', color: '#16a085', label: 'ZSC - Directive habitats' },
                 { symbol: 'polygon', color: '#f39c12', label: 'Zone tampon' },
                 { symbol: 'line', color: '#c0392b', label: 'Limites' }
-            ],
-            metadata: {
-                source: 'DREAL 2024',
-                date: 'Janvier 2024',
-                method: 'Directive 92/43/CEE'
-            }
+            ]
         }
     },
 
@@ -81,8 +93,3 @@ const GeoFlowConfig = {
         }
     }
 };
-
-// Export for use in other modules
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = GeoFlowConfig;
-}

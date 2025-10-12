@@ -6,7 +6,7 @@
 const GeoFlowMap = {
     map: null,
     baseLayers: {},
-    currentBasemap: 'osm',
+    currentBasemap: null,
 
     /**
      * Initialize the map
@@ -16,27 +16,8 @@ const GeoFlowMap = {
         this.map = L.map('map', { zoomControl: false })
             .setView(GeoFlowConfig.map.center, GeoFlowConfig.map.zoom);
 
-        // Add base layers
-        this.baseLayers['OSM'] = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap',
-            maxZoom: 19
-        }).addTo(this.map);
-
-        this.baseLayers['Satellite'] = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '© Esri'
-        });
-
-        this.baseLayers['Topo'] = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenTopoMap'
-        });
-
-        this.baseLayers['Positron'] = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
-            attribution: '© Carto'
-        });
-
-        this.baseLayers['DarkMatter'] = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
-            attribution: '© Carto'
-        });
+        // Load base layers from config
+        this.loadBaseLayers();
 
         // Add event listeners
         this.map.on('moveend', () => this.updateStats());
@@ -47,28 +28,48 @@ const GeoFlowMap = {
     },
 
     /**
+     * Load base layers from configuration
+     */
+    loadBaseLayers() {
+        const baseLayers = GeoFlowConfig.map.baseLayers;
+        let defaultLayer = null;
+
+        Object.entries(baseLayers).forEach(([key, config]) => {
+            const layer = L.tileLayer(config.url, {
+                attribution: config.attribution,
+                maxZoom: config.maxZoom
+            });
+
+            this.baseLayers[key] = layer;
+
+            if (config.default) {
+                defaultLayer = key;
+                this.currentBasemap = key;
+                layer.addTo(this.map);
+            }
+        });
+
+        // If no default, use first layer
+        if (!defaultLayer) {
+            const firstKey = Object.keys(baseLayers)[0];
+            this.currentBasemap = firstKey;
+            this.baseLayers[firstKey].addTo(this.map);
+        }
+    },
+
+    /**
      * Switch basemap
      * @param {string} type - Basemap type (osm, satellite, topo, positron, darkmatter)
      */
     switchBasemap(type) {
         Object.values(this.baseLayers).forEach(layer => this.map.removeLayer(layer));
         
-        const layerMap = {
-            'osm': 'OSM',
-            'satellite': 'Satellite',
-            'topo': 'Topo',
-            'positron': 'Positron',
-            'darkmatter': 'DarkMatter'
-        };
-        
-        const layerName = layerMap[type];
-        if (this.baseLayers[layerName]) {
-            this.map.addLayer(this.baseLayers[layerName]);
+        if (this.baseLayers[type]) {
+            this.map.addLayer(this.baseLayers[type]);
             this.currentBasemap = type;
             
-            const clickedItem = document.querySelector(`[data-basemap="${type}"]`);
-            const tooltip = clickedItem ? clickedItem.querySelector('.tooltip-custom').textContent : layerName;
-            GeoFlowUtils.showToast(`Fond: ${tooltip}`, 'success');
+            const layerConfig = GeoFlowConfig.map.baseLayers[type];
+            GeoFlowUtils.showToast(`Fond: ${layerConfig.name}`, 'success');
         }
     },
 
