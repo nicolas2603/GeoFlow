@@ -113,6 +113,11 @@ const GeoFlowPanels = {
                 content.innerHTML = GeoFlowTools.getPanelContent();
                 GeoFlowTools.attachListeners();
                 break;
+            case 'print':
+                title.textContent = 'Imprimer';
+                content.innerHTML = GeoFlowPrint.getPanelContent();
+                GeoFlowPrint.attachListeners();
+                break;
         }
 
         panel.classList.add('active');

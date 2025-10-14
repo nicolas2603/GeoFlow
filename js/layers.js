@@ -7,6 +7,7 @@ const GeoFlowLayers = {
     overlayLayers: {},
     markerClusters: null,
     layerOpacities: {},
+    activeLayerIds: new Set(), // Store active layer IDs
 
     /**
      * Initialize layers system
@@ -103,10 +104,14 @@ const GeoFlowLayers = {
      * Create layer item HTML
      */
     createLayerItem(id, name, source, date) {
+        const isActive = this.activeLayerIds.has(id);
+        const opacity = this.layerOpacities[id] || 1;
+        const opacityPercent = Math.round(opacity * 100);
+        
         return `
-            <div class="layer-item" data-layer="${id}">
+            <div class="layer-item ${isActive ? 'active' : ''}" data-layer="${id}">
                 <div class="layer-item-main">
-                    <input type="checkbox" class="layer-checkbox">
+                    <input type="checkbox" class="layer-checkbox" ${isActive ? 'checked' : ''}>
                     <div class="layer-name">${name}</div>
                     <button class="layer-expand-btn" title="Détails">
                         <i class="fa-solid fa-plus"></i>
@@ -117,9 +122,9 @@ const GeoFlowLayers = {
                         <div class="layer-opacity-control">
                             <div class="opacity-label">
                                 <span>Opacité</span>
-                                <span class="opacity-value">100%</span>
+                                <span class="opacity-value">${opacityPercent}%</span>
                             </div>
-                            <input type="range" class="opacity-slider" min="0" max="100" value="100">
+                            <input type="range" class="opacity-slider" min="0" max="100" value="${opacityPercent}">
                         </div>
                         <div class="layer-metadata">
                             <div><strong>Source:</strong> ${source}</div>
@@ -213,6 +218,14 @@ const GeoFlowLayers = {
      * Toggle layer visibility
      */
     toggleLayer(layerId, show) {
+        // Update state
+        if (show) {
+            this.activeLayerIds.add(layerId);
+        } else {
+            this.activeLayerIds.delete(layerId);
+        }
+        
+        // Apply to map
         if (layerId === 'points') {
             show ? this.loadDemoPoints() : this.markerClusters.clearLayers();
         } else if (layerId === 'zones') {
@@ -222,6 +235,8 @@ const GeoFlowLayers = {
                 GeoFlowMap.map.removeLayer(this.overlayLayers['zones']);
             }
         }
+        
+        console.log('Active layers:', Array.from(this.activeLayerIds));
     },
 
     /**
@@ -260,6 +275,9 @@ const GeoFlowLayers = {
      * Apply opacity to layer
      */
     applyLayerOpacity(layerId, opacity) {
+        // Store opacity value
+        this.layerOpacities[layerId] = opacity;
+        
         if (layerId === 'zones' && this.overlayLayers['zones']) {
             this.overlayLayers['zones'].setStyle({ 
                 fillOpacity: opacity * 0.2, 

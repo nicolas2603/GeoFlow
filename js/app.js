@@ -17,7 +17,7 @@ const GeoFlowApp = {
         // Update loading text with app title
         const loadingText = document.getElementById('loading-text');
         if (loadingText) {
-            loadingText.textContent = `Chargement de ${GeoFlowConfig.app.title}`;
+            loadingText.textContent = `Chargement de l'application ${GeoFlowConfig.app.title}`;
         }
 
         // Simulate minimum loading time for better UX

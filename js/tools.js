@@ -21,21 +21,21 @@ const GeoFlowTools = {
                     <i class="fa-solid fa-camera"></i>
                     <div class="tool-card-label">Capture</div>
                 </div>
-                <div class="tool-card" data-tool="share">
-                    <i class="fa-solid fa-share-nodes"></i>
-                    <div class="tool-card-label">Partager</div>
-                </div>
-                <div class="tool-card" data-tool="print">
-                    <i class="fa-solid fa-print"></i>
-                    <div class="tool-card-label">Imprimer</div>
-                </div>
                 <div class="tool-card" data-tool="help">
                     <i class="fa-solid fa-circle-question"></i>
                     <div class="tool-card-label">Aide</div>
                 </div>
+                <div class="tool-card" data-tool="share">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <div class="tool-card-label">Partager</div>
+                </div>
                 <div class="tool-card" data-tool="export">
                     <i class="fa-solid fa-download"></i>
                     <div class="tool-card-label">Export</div>
+                </div>
+                <div class="tool-card" data-tool="print">
+                    <i class="fa-solid fa-print"></i>
+                    <div class="tool-card-label">Imprimer</div>
                 </div>
             </div>
 
@@ -88,7 +88,7 @@ const GeoFlowTools = {
                 GeoFlowUtils.showToast('Lien copié', 'success');
                 break;
             case 'print':
-                window.print();
+                GeoFlowPanels.showPanel('print');
                 break;
             case 'export':
                 if (GeoFlowConfig.isFeatureEnabled('draw')) {
