@@ -10,18 +10,50 @@ const GeoFlowPanels = {
      * Initialize panel controls
      */
     init() {
-        // Panel buttons
-        document.getElementById('btn-layers').addEventListener('click', () => this.showPanel('layers'));
-        document.getElementById('btn-draw').addEventListener('click', () => this.showPanel('draw'));
-        document.getElementById('btn-measure').addEventListener('click', () => this.showPanel('measure'));
-        document.getElementById('btn-tools').addEventListener('click', () => this.showPanel('tools'));
+        // Panel buttons - only if features are enabled
+        if (GeoFlowConfig.isFeatureEnabled('layers')) {
+            const btnLayers = document.getElementById('btn-layers');
+            if (btnLayers) {
+                btnLayers.addEventListener('click', () => this.showPanel('layers'));
+            }
+        }
+
+        if (GeoFlowConfig.isFeatureEnabled('draw')) {
+            const btnDraw = document.getElementById('btn-draw');
+            if (btnDraw) {
+                btnDraw.addEventListener('click', () => this.showPanel('draw'));
+            }
+        }
+
+        if (GeoFlowConfig.isFeatureEnabled('measure')) {
+            const btnMeasure = document.getElementById('btn-measure');
+            if (btnMeasure) {
+                btnMeasure.addEventListener('click', () => this.showPanel('measure'));
+            }
+        }
+
+        if (GeoFlowConfig.isFeatureEnabled('tools')) {
+            const btnTools = document.getElementById('btn-tools');
+            if (btnTools) {
+                btnTools.addEventListener('click', () => this.showPanel('tools'));
+            }
+        }
         
         // Close button
         document.getElementById('panel-close').addEventListener('click', () => this.closePanel());
 
         // Legend widget
-        document.getElementById('btn-legend').addEventListener('click', () => this.toggleLegend());
-        document.getElementById('legend-widget-close').addEventListener('click', () => this.toggleLegend());
+        if (GeoFlowConfig.isFeatureEnabled('legend')) {
+            const btnLegend = document.getElementById('btn-legend');
+            const legendClose = document.getElementById('legend-widget-close');
+            
+            if (btnLegend) {
+                btnLegend.addEventListener('click', () => this.toggleLegend());
+            }
+            if (legendClose) {
+                legendClose.addEventListener('click', () => this.toggleLegend());
+            }
+        }
     },
 
     /**
@@ -29,6 +61,12 @@ const GeoFlowPanels = {
      * @param {string} type - Panel type (layers, draw, measure, tools)
      */
     showPanel(type) {
+        // Check if feature is enabled using GeoFlowConfig method
+        if (!GeoFlowConfig.isFeatureEnabled(type)) {
+            GeoFlowUtils.showToast('Fonctionnalité désactivée', 'warning');
+            return;
+        }
+
         const panel = document.getElementById('panel');
         const content = document.getElementById('panel-content');
         const title = document.getElementById('panel-title');
@@ -40,9 +78,16 @@ const GeoFlowPanels = {
             return;
         }
 
-        // Update button states
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        // Update button states - exclude btn-legend from being deactivated
+        document.querySelectorAll('.tool-btn').forEach(b => {
+            if (b.id !== 'btn-legend') {
+                b.classList.remove('active');
+            }
+        });
+        
+        if (btn) {
+            btn.classList.add('active');
+        }
 
         this.currentPanel = type;
         
@@ -78,7 +123,12 @@ const GeoFlowPanels = {
      */
     closePanel() {
         document.getElementById('panel').classList.remove('active');
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        // Remove active state from all buttons except btn-legend
+        document.querySelectorAll('.tool-btn').forEach(b => {
+            if (b.id !== 'btn-legend') {
+                b.classList.remove('active');
+            }
+        });
         this.currentPanel = null;
     },
 
@@ -86,9 +136,19 @@ const GeoFlowPanels = {
      * Toggle legend widget
      */
     toggleLegend() {
+        if (!GeoFlowConfig.isFeatureEnabled('legend')) {
+            GeoFlowUtils.showToast('Légende désactivée', 'warning');
+            return;
+        }
+
         const widget = document.getElementById('legend-widget');
         const btn = document.getElementById('btn-legend');
-        widget.classList.toggle('active');
-        btn.classList.toggle('active');
+        
+        if (widget) {
+            widget.classList.toggle('active');
+        }
+        if (btn) {
+            btn.classList.toggle('active');
+        }
     }
 };

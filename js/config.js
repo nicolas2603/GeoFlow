@@ -25,7 +25,7 @@ const GeoFlowConfig = {
             osm: {
                 name: 'OpenStreetMap',
                 url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-				preview: 'assets/osm.png',
+                preview: 'assets/osm.png',
                 attribution: '© OpenStreetMap',
                 maxZoom: 19,
                 default: true
@@ -41,6 +41,9 @@ const GeoFlowConfig = {
 
     // Layers configuration (loaded from config.json)
     layersConfig: {},
+    
+    // Features configuration (loaded from config.json)
+    featuresConfig: {},
 
     // Legend definitions (loaded from config.json or defaults)
     legends: {
@@ -91,5 +94,17 @@ const GeoFlowConfig = {
             color: '#2563eb',
             fillOpacity: 0.2
         }
+    },
+	
+	/**
+     * Helper to get feature status with fallback to true
+     * @param {string} featureName - Name of the feature
+     * @returns {boolean}
+     */
+    isFeatureEnabled: function(featureName) {
+        if (!this.featuresConfig || Object.keys(this.featuresConfig).length === 0) {
+            return true; // Default to enabled if config not loaded
+        }
+        return this.featuresConfig[featureName] !== false;
     }
 };

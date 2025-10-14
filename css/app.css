@@ -790,6 +790,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+	height: 36px;
 }
 
 .layer-item-main:hover {

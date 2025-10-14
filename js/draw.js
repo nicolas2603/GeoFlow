@@ -47,6 +47,16 @@ const GeoFlowDraw = {
             e.layer.bindPopup(info);
             GeoFlowUtils.showToast('Géométrie ajoutée', 'success');
         });
+
+        // Listen for edited shapes
+        GeoFlowMap.map.on(L.Draw.Event.EDITED, (e) => {
+            GeoFlowUtils.showToast(`${e.layers.getLayers().length} géométrie(s) modifiée(s)`, 'success');
+        });
+
+        // Listen for deleted shapes
+        GeoFlowMap.map.on(L.Draw.Event.DELETED, (e) => {
+            GeoFlowUtils.showToast(`${e.layers.getLayers().length} géométrie(s) supprimée(s)`, 'success');
+        });
     },
 
     /**
@@ -56,38 +66,48 @@ const GeoFlowDraw = {
         return `
             <div class="tool-grid">
                 <div class="tool-card" data-draw="marker">
-                    <i class="bi bi-geo-alt"></i>
+                    <i class="fa-solid fa-location-dot"></i>
                     <div class="tool-card-label">Point</div>
                 </div>
                 <div class="tool-card" data-draw="polyline">
-                    <i class="bi bi-bezier2"></i>
+                    <i class="fa-solid fa-bezier-curve"></i>
                     <div class="tool-card-label">Ligne</div>
                 </div>
                 <div class="tool-card" data-draw="polygon">
-                    <i class="bi bi-pentagon"></i>
+                    <i class="fa-solid fa-draw-polygon"></i>
                     <div class="tool-card-label">Polygone</div>
                 </div>
                 <div class="tool-card" data-draw="rectangle">
-                    <i class="bi bi-square"></i>
+                    <i class="fa-regular fa-square"></i>
                     <div class="tool-card-label">Rectangle</div>
                 </div>
                 <div class="tool-card" data-draw="circle">
-                    <i class="bi bi-circle"></i>
+                    <i class="fa-regular fa-circle"></i>
                     <div class="tool-card-label">Cercle</div>
                 </div>
+                <div class="tool-card" data-draw="edit">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <div class="tool-card-label">Éditer</div>
+                </div>
                 <div class="tool-card" data-draw="delete">
-                    <i class="bi bi-trash"></i>
+                    <i class="fa-solid fa-trash"></i>
                     <div class="tool-card-label">Supprimer</div>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 6px; margin-top: 12px;">
-                <button class="btn btn-sm btn-primary flex-fill" id="export-geojson" style="font-size: 0.8rem; padding: 6px 10px;">
-                    <i class="bi bi-download"></i> Exporter
-                </button>
-                <button class="btn btn-sm btn-outline-danger flex-fill" id="clear-all" style="font-size: 0.8rem; padding: 6px 10px;">
-                    <i class="bi bi-x-circle"></i> Effacer
-                </button>
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 12px;">
+                <label class="btn btn-sm btn-outline-primary" style="font-size: 0.8rem; padding: 6px 10px; cursor: pointer; margin: 0;">
+                    <i class="fa-solid fa-file-import"></i> Importer GeoJSON
+                    <input type="file" id="import-geojson" accept=".geojson,.json" style="display: none;">
+                </label>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-sm btn-primary flex-fill" id="export-geojson" style="font-size: 0.8rem; padding: 6px 10px;">
+                        <i class="fa-solid fa-file-export"></i> Exporter
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger flex-fill" id="clear-all" style="font-size: 0.8rem; padding: 6px 10px;">
+                        <i class="fa-solid fa-circle-xmark"></i> Effacer
+                    </button>
+                </div>
             </div>
         `;
     },
@@ -105,7 +125,11 @@ const GeoFlowDraw = {
         document.querySelectorAll('[data-draw]').forEach(card => {
             card.addEventListener('click', () => {
                 const type = card.dataset.draw;
-                if (type === 'delete') {
+                if (type === 'edit') {
+                    new L.EditToolbar.Edit(GeoFlowMap.map, { 
+                        featureGroup: this.drawnItems 
+                    }).enable();
+                } else if (type === 'delete') {
                     new L.EditToolbar.Delete(GeoFlowMap.map, { 
                         featureGroup: this.drawnItems 
                     }).enable();
@@ -115,6 +139,12 @@ const GeoFlowDraw = {
                 }
             });
         });
+
+        // Import button
+        const importBtn = document.getElementById('import-geojson');
+        if (importBtn) {
+            importBtn.addEventListener('change', (e) => this.importGeoJSON(e));
+        }
 
         // Export button
         const exportBtn = document.getElementById('export-geojson');
@@ -127,6 +157,107 @@ const GeoFlowDraw = {
         if (clearBtn) {
             clearBtn.addEventListener('click', () => this.clearAll());
         }
+    },
+
+    /**
+     * Import GeoJSON file
+     * @param {Event} event - File input change event
+     */
+    importGeoJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const geojson = JSON.parse(e.target.result);
+                
+                // Check for CRS/projection information
+                let needsReprojection = false;
+                let sourceCRS = null;
+                
+                // Check CRS in the GeoJSON
+                if (geojson.crs && geojson.crs.properties) {
+                    const crsName = geojson.crs.properties.name;
+                    
+                    // Detect EPSG:2154 (Lambert 93) or other non-WGS84 projections
+                    if (crsName.includes('2154') || 
+                        crsName.includes('EPSG:2154') || 
+                        crsName.includes('Lambert_Conformal_Conic_2SP')) {
+                        needsReprojection = true;
+                        sourceCRS = 'EPSG:2154';
+                    }
+                }
+                
+                // If reprojection needed, show warning
+                if (needsReprojection) {
+                    GeoFlowUtils.showToast(`Projection détectée: ${sourceCRS}. La reprojection automatique n'est pas disponible. Veuillez convertir en EPSG:4326 (WGS84).`, 'warning');
+                    console.warn('GeoJSON uses non-WGS84 projection. Automatic reprojection not available.');
+                    console.warn('Please convert your GeoJSON to EPSG:4326 using tools like ogr2ogr or QGIS.');
+                    console.warn('Command example: ogr2ogr -f GeoJSON -t_srs EPSG:4326 output.geojson input.geojson');
+                    
+                    // Still try to load but coordinates will likely be wrong
+                    GeoFlowUtils.showToast('Les coordonnées peuvent être incorrectes. Conversion recommandée.', 'error');
+                }
+                
+                // Add GeoJSON to map using Leaflet's native support
+                const layer = L.geoJSON(geojson, {
+                    onEachFeature: (feature, layer) => {
+                        // Add to drawn items so it can be edited
+                        this.drawnItems.addLayer(layer);
+                        
+                        // Create popup content
+                        let popupContent = '<div class="feature-popup"><h6>Géométrie importée</h6><table>';
+                        if (feature.properties) {
+                            Object.entries(feature.properties).forEach(([key, value]) => {
+                                popupContent += `<tr><td>${key}</td><td>${value}</td></tr>`;
+                            });
+                        }
+                        popupContent += '</table></div>';
+                        layer.bindPopup(popupContent);
+                    },
+                    style: (feature) => {
+                        return {
+                            color: '#2563eb',
+                            weight: 3,
+                            fillOpacity: 0.3
+                        };
+                    },
+                    pointToLayer: (feature, latlng) => {
+                        return L.marker(latlng);
+                    }
+                });
+
+                // Fit bounds to imported features
+                if (layer.getBounds && layer.getBounds().isValid()) {
+                    GeoFlowMap.map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                } else {
+                    GeoFlowUtils.showToast('Impossible de zoomer sur les géométries', 'warning');
+                }
+
+                // Count features
+                let featureCount = 0;
+                if (geojson.type === 'FeatureCollection') {
+                    featureCount = geojson.features.length;
+                } else if (geojson.type === 'Feature') {
+                    featureCount = 1;
+                } else {
+                    featureCount = 1; // Single geometry
+                }
+                
+                if (!needsReprojection) {
+                    GeoFlowUtils.showToast(`${featureCount} géométrie(s) importée(s)`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('Error importing GeoJSON:', error);
+                GeoFlowUtils.showToast('Erreur lors de l\'import du fichier', 'error');
+            }
+        };
+        
+        reader.readAsText(file);
+        // Reset input to allow reimporting the same file
+        event.target.value = '';
     },
 
     /**

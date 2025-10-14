@@ -28,10 +28,10 @@ const GeoFlowUtils = {
     showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
         const icons = {
-            success: 'check-circle-fill',
-            error: 'x-circle-fill',
-            warning: 'exclamation-triangle-fill',
-            info: 'info-circle-fill'
+            success: 'circle-check',
+            error: 'circle-xmark',
+            warning: 'triangle-exclamation',
+            info: 'circle-info'
         };
 
         const colors = {
@@ -44,7 +44,7 @@ const GeoFlowUtils = {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         toast.innerHTML = `
-            <i class="bi bi-${icons[type]} toast-icon" style="color: ${colors[type]}"></i>
+            <i class="fa-solid fa-${icons[type]} toast-icon" style="color: ${colors[type]}"></i>
             <div class="toast-message">${message}</div>
         `;
         

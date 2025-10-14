@@ -22,18 +22,18 @@ const GeoFlowLayers = {
     getPanelContent() {
         return `
             <div class="layer-search">
-                <i class="bi bi-search"></i>
+                <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="layer-search-input" placeholder="Rechercher une couche...">
             </div>
 
             <div class="layer-theme" data-theme="environnement">
                 <div class="layer-theme-header">
                     <div class="layer-theme-title">
-                        <i class="bi bi-tree layer-theme-icon"></i>
+                        <i class="fa-solid fa-tree layer-theme-icon"></i>
                         <span>Environnement</span>
                         <span class="layer-theme-count">(3)</span>
                     </div>
-                    <i class="bi bi-chevron-right layer-theme-chevron"></i>
+                    <i class="fa-solid fa-chevron-right layer-theme-chevron"></i>
                 </div>
                 <div class="layer-theme-content">
                     <div class="layer-group">
@@ -47,11 +47,11 @@ const GeoFlowLayers = {
             <div class="layer-theme" data-theme="transport">
                 <div class="layer-theme-header">
                     <div class="layer-theme-title">
-                        <i class="bi bi-bus-front layer-theme-icon"></i>
+                        <i class="fa-solid fa-bus layer-theme-icon"></i>
                         <span>Transport</span>
                         <span class="layer-theme-count">(2)</span>
                     </div>
-                    <i class="bi bi-chevron-right layer-theme-chevron"></i>
+                    <i class="fa-solid fa-chevron-right layer-theme-chevron"></i>
                 </div>
                 <div class="layer-theme-content">
                     <div class="layer-group">
@@ -64,11 +64,11 @@ const GeoFlowLayers = {
             <div class="layer-theme" data-theme="demo">
                 <div class="layer-theme-header">
                     <div class="layer-theme-title">
-                        <i class="bi bi-star layer-theme-icon"></i>
+                        <i class="fa-solid fa-star layer-theme-icon"></i>
                         <span>Démonstration</span>
                         <span class="layer-theme-count">(2)</span>
                     </div>
-                    <i class="bi bi-chevron-right layer-theme-chevron"></i>
+                    <i class="fa-solid fa-chevron-right layer-theme-chevron"></i>
                 </div>
                 <div class="layer-theme-content">
                     <div class="layer-group">
@@ -109,7 +109,7 @@ const GeoFlowLayers = {
                     <input type="checkbox" class="layer-checkbox">
                     <div class="layer-name">${name}</div>
                     <button class="layer-expand-btn" title="Détails">
-                        <i class="bi bi-plus"></i>
+                        <i class="fa-solid fa-plus"></i>
                     </button>
                 </div>
                 <div class="layer-details">
@@ -171,7 +171,7 @@ const GeoFlowLayers = {
                 
                 details.classList.toggle('expanded');
                 btn.classList.toggle('expanded');
-                icon.className = details.classList.contains('expanded') ? 'bi bi-dash' : 'bi bi-plus';
+                icon.className = details.classList.contains('expanded') ? 'fa-solid fa-minus' : 'fa-solid fa-plus';
             });
         });
 

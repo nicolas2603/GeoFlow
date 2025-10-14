@@ -9,41 +9,46 @@ const GeoFlowTools = {
      */
     getPanelContent() {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const logoPath = GeoFlowConfig.theme.logo || 'assets/logo.png';
+        
         return `
             <div class="tool-grid">
                 <div class="tool-card" data-tool="theme" id="theme-toggle">
-                    <i class="bi bi-${isDark ? 'sun-fill' : 'moon-stars-fill'}"></i>
+                    <i class="fa-solid fa-${isDark ? 'sun' : 'moon'}"></i>
                     <div class="tool-card-label">${isDark ? 'Clair' : 'Sombre'}</div>
                 </div>
                 <div class="tool-card" data-tool="screenshot">
-                    <i class="bi bi-camera"></i>
+                    <i class="fa-solid fa-camera"></i>
                     <div class="tool-card-label">Capture</div>
                 </div>
                 <div class="tool-card" data-tool="share">
-                    <i class="bi bi-share"></i>
+                    <i class="fa-solid fa-share-nodes"></i>
                     <div class="tool-card-label">Partager</div>
                 </div>
                 <div class="tool-card" data-tool="print">
-                    <i class="bi bi-printer"></i>
+                    <i class="fa-solid fa-print"></i>
                     <div class="tool-card-label">Imprimer</div>
                 </div>
                 <div class="tool-card" data-tool="help">
-                    <i class="bi bi-question-circle"></i>
+                    <i class="fa-solid fa-circle-question"></i>
                     <div class="tool-card-label">Aide</div>
                 </div>
                 <div class="tool-card" data-tool="export">
-                    <i class="bi bi-download"></i>
+                    <i class="fa-solid fa-download"></i>
                     <div class="tool-card-label">Export</div>
                 </div>
             </div>
 
-            <div style="margin-top: 16px; padding: 10px; background: var(--hover-bg); border-radius: 6px;">
-                <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px;">À propos</div>
-                <p style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                    <strong style="font-size: 0.8rem;">GeoFlow v1.0</strong><br>
-                    Visualiseur WebSIG open source<br>
-                    Leaflet + Bootstrap + PostGIS
-                </p>
+            <div style="margin-top: 16px; padding: 12px; background: var(--hover-bg); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+                <img src="${logoPath}" alt="GeoFlow Logo" style="width: 55px; height: 55px; flex-shrink: 0; object-fit: contain;" onerror="this.style.display='none'">
+                <div style="flex: 1;">
+                    <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px;">À propos</div>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+                        <strong style="font-size: 0.8rem;">GeoFlow v1.0</strong><br>
+                        Visualiseur WebSIG open source<br>
+                        Leaflet + Bootstrap + PostGIS
+                    </p>
+                </div>
             </div>
         `;
     },
@@ -86,7 +91,11 @@ const GeoFlowTools = {
                 window.print();
                 break;
             case 'export':
-                GeoFlowDraw.exportGeoJSON();
+                if (GeoFlowConfig.isFeatureEnabled('draw')) {
+                    GeoFlowDraw.exportGeoJSON();
+                } else {
+                    GeoFlowUtils.showToast('Fonctionnalité de dessin désactivée', 'warning');
+                }
                 break;
             case 'help':
                 GeoFlowUtils.showToast('Documentation : docs.geoflow.io', 'info');

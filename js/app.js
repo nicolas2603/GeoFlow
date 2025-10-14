@@ -23,11 +23,21 @@ const GeoFlowApp = {
         // Simulate minimum loading time for better UX
         await new Promise(resolve => setTimeout(resolve, 800));
 
+        // Apply feature configuration AFTER config is loaded
+        this.applyFeatureConfig();
+
         // Initialize all modules
         GeoFlowMap.init();
         GeoFlowLayers.init();
-        GeoFlowDraw.init();
-        GeoFlowSearch.init();
+        
+        if (GeoFlowConfig.isFeatureEnabled('draw')) {
+            GeoFlowDraw.init();
+        }
+        
+        if (GeoFlowConfig.isFeatureEnabled('search')) {
+            GeoFlowSearch.init();
+        }
+        
         GeoFlowBasemap.init();
         GeoFlowPanels.init();
 
@@ -68,6 +78,9 @@ const GeoFlowApp = {
                 if (config.legends) {
                     GeoFlowConfig.legends = { ...GeoFlowConfig.legends, ...config.legends };
                 }
+                if (config.features) {
+                    GeoFlowConfig.featuresConfig = config.features;
+                }
                 
                 console.log('Configuration loaded from config.json');
             }
@@ -77,12 +90,64 @@ const GeoFlowApp = {
     },
 
     /**
+     * Apply feature configuration by hiding disabled features
+     */
+    applyFeatureConfig() {
+        // Hide draw button if disabled
+        if (!GeoFlowConfig.isFeatureEnabled('draw')) {
+            const btnDraw = document.getElementById('btn-draw');
+            if (btnDraw) btnDraw.style.display = 'none';
+        }
+
+        // Hide measure button if disabled
+        if (!GeoFlowConfig.isFeatureEnabled('measure')) {
+            const btnMeasure = document.getElementById('btn-measure');
+            if (btnMeasure) btnMeasure.style.display = 'none';
+        }
+
+        // Hide geolocation button if disabled
+        if (!GeoFlowConfig.isFeatureEnabled('geolocation')) {
+            const btnLocate = document.getElementById('btn-locate');
+            if (btnLocate) btnLocate.style.display = 'none';
+        }
+
+        // Hide legend button if disabled
+        if (!GeoFlowConfig.isFeatureEnabled('legend')) {
+            const btnLegend = document.getElementById('btn-legend');
+            if (btnLegend) btnLegend.style.display = 'none';
+        }
+
+        // Hide layers button if disabled
+        if (!GeoFlowConfig.isFeatureEnabled('layers')) {
+            const btnLayers = document.getElementById('btn-layers');
+            if (btnLayers) btnLayers.style.display = 'none';
+        }
+
+        // Hide tools button if disabled
+        if (!GeoFlowConfig.isFeatureEnabled('tools')) {
+            const btnTools = document.getElementById('btn-tools');
+            if (btnTools) btnTools.style.display = 'none';
+        }
+
+        // Hide search bar if disabled
+        if (!GeoFlowConfig.isFeatureEnabled('search')) {
+            const searchBar = document.querySelector('.search-bar');
+            if (searchBar) searchBar.style.display = 'none';
+        }
+    },
+
+    /**
      * Initialize action buttons
      */
     initActionButtons() {
-        document.getElementById('btn-locate').addEventListener('click', () => {
-            GeoFlowMap.locateUser();
-        });
+        if (GeoFlowConfig.isFeatureEnabled('geolocation')) {
+            const btnLocate = document.getElementById('btn-locate');
+            if (btnLocate) {
+                btnLocate.addEventListener('click', () => {
+                    GeoFlowMap.locateUser();
+                });
+            }
+        }
 
         document.getElementById('btn-fullscreen').addEventListener('click', () => {
             GeoFlowMap.toggleFullscreen();
@@ -104,7 +169,7 @@ const GeoFlowApp = {
             }
             
             // Ctrl+F - Focus search
-            if (e.ctrlKey && e.key === 'f') {
+            if (GeoFlowConfig.isFeatureEnabled('search') && e.ctrlKey && e.key === 'f') {
                 e.preventDefault();
                 document.getElementById('search-input').focus();
             }

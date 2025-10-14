@@ -3,10 +3,10 @@
     "name": "default",
     "title": "Test",
     "colors": {
-      "primary": "#2563eb",
-      "secondary": "#0ea5e9"
+      "primary": "#378ba7",
+      "secondary": "#278368"
     },
-    "logo": "assets/logo.svg"
+    "logo": "assets/logo.png"
   },
   "map": {
     "center": [43.6108, 3.8767],
@@ -156,13 +156,13 @@
   },
   "features": {
     "layers": true,
-    "draw": true,
-    "measure": true,
     "legend": true,
-    "tools": true,
+	"tools": true,
     "search": true,
     "export": true,
-    "print": true
+    "print": true,
+    "draw": true,
+    "measure": true
   },
   "cache": {
     "enabled": false

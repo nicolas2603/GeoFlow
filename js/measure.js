@@ -13,11 +13,11 @@ const GeoFlowMeasure = {
         return `
             <div class="tool-grid" style="grid-template-columns: repeat(2, 1fr);">
                 <div class="tool-card" data-measure="distance">
-                    <i class="bi bi-rulers"></i>
+                    <i class="fa-solid fa-ruler"></i>
                     <div class="tool-card-label">Distance</div>
                 </div>
                 <div class="tool-card" data-measure="area">
-                    <i class="bi bi-bounding-box"></i>
+                    <i class="fa-solid fa-vector-square"></i>
                     <div class="tool-card-label">Surface</div>
                 </div>
             </div>
