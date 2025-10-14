@@ -24,7 +24,7 @@ const GeoFlowConfig = {
             // Default fallback if config.json not available
             osm: {
                 name: 'OpenStreetMap',
-                url: 'assets/osm.png',
+                url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 				preview: 'assets/osm.png',
                 attribution: '© OpenStreetMap',
                 maxZoom: 19,

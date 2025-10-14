@@ -314,7 +314,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /*color: var(--primary);*/
+    color: var(--text-primary);
     font-size: 1.3rem;
     transition: all 0.2s;
     position: relative;

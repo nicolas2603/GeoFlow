@@ -17,7 +17,7 @@
       "osm": {
         "name": "OpenStreetMap",
         "icon": "bi-map",
-        "url": "assets/osm.png",
+        "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 		"preview": "assets/osm.png",
         "attribution": "© OpenStreetMap",
         "maxZoom": 19,
@@ -26,7 +26,7 @@
       "satellite": {
         "name": "Satellite",
         "icon": "bi-globe",
-        "url": "assets/satellite.png",
+        "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         "preview": "assets/satellite.png",
         "attribution": "© Esri",
         "maxZoom": 19
@@ -34,7 +34,7 @@
       "topo": {
         "name": "Topographique",
         "icon": "bi-mountain",
-        "url": "assets/topo.png",
+        "url": "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
         "preview": "assets/topo.png",
         "attribution": "© OpenTopoMap",
         "maxZoom": 17
@@ -42,7 +42,7 @@
       "positron": {
         "name": "Positron",
         "icon": "bi-map",
-        "url": "assets/positron.png",
+        "url": "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
         "preview": "assets/positron.png",
         "attribution": "© CARTO",
         "maxZoom": 19
@@ -50,7 +50,7 @@
       "darkmatter": {
         "name": "Dark Matter",
         "icon": "bi-map-fill",
-        "url": "assets/dark.png",
+        "url": "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
         "preview": "assets/dark.png",
         "attribution": "© CARTO",
         "maxZoom": 19
@@ -155,14 +155,16 @@
     }
   },
   "features": {
+    "layers": true,
     "draw": true,
+    "measure": true,
+    "legend": true,
+    "tools": true,
     "search": true,
     "export": true,
-    "measure": true,
     "print": true
   },
   "cache": {
-    "enabled": true,
-    "duration": 3600
+    "enabled": false
   }
 }
