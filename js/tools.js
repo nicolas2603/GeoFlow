@@ -40,7 +40,7 @@ const GeoFlowTools = {
             </div>
 
             <div style="margin-top: 16px; padding: 12px; background: var(--hover-bg); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
-                <img src="${logoPath}" alt="GeoFlow Logo" style="width: 55px; height: 55px; flex-shrink: 0; object-fit: contain;" onerror="this.style.display='none'">
+                <img src="${logoPath}" alt="GeoFlow" style="width: 77px; height: 77px; flex-shrink: 0; object-fit: contain;" onerror="this.style.display='none'">
                 <div style="flex: 1;">
                     <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px;">À propos</div>
                     <p style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
