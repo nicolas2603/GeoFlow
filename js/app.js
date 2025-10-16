@@ -14,6 +14,9 @@ const GeoFlowApp = {
         // Load config from JSON if available
         await this.loadConfig();
 
+        // Apply theme colors from config
+        this.applyThemeColors();
+
         // Update loading text with app title
         const loadingText = document.getElementById('loading-text');
         if (loadingText) {
@@ -33,11 +36,15 @@ const GeoFlowApp = {
         if (GeoFlowConfig.isFeatureEnabled('draw')) {
             GeoFlowDraw.init();
         }
-        
+
+        if (GeoFlowConfig.isFeatureEnabled('measure')) {
+            GeoFlowMeasure.init();
+        }
+
         if (GeoFlowConfig.isFeatureEnabled('search')) {
             GeoFlowSearch.init();
         }
-        
+
         GeoFlowBasemap.init();
         GeoFlowPanels.init();
 
@@ -52,7 +59,7 @@ const GeoFlowApp = {
             GeoFlowUtils.hideLoading();
         }, 300);
 
-        console.log('GeoFlow initialized successfully');
+        console.log('✅ GeoFlow initialized successfully');
     },
 
     /**
@@ -82,10 +89,99 @@ const GeoFlowApp = {
                     GeoFlowConfig.featuresConfig = config.features;
                 }
                 
-                console.log('Configuration loaded from config.json');
+                console.log('✅ Configuration loaded from config.json');
             }
         } catch (error) {
-            console.warn('Could not load config.json, using default configuration');
+            console.warn('⚠️ Could not load config.json, using default configuration');
+        }
+    },
+
+    /**
+     * Apply theme colors from config.json to CSS variables
+     */
+    applyThemeColors() {
+        if (!GeoFlowConfig.theme || !GeoFlowConfig.theme.colors) {
+            console.log('ℹ️ No theme colors defined in config.json, using defaults');
+            return;
+        }
+
+        const root = document.documentElement;
+        const colors = GeoFlowConfig.theme.colors;
+
+        // Apply primary color (light mode)
+        if (colors.primary) {
+            root.style.setProperty('--primary', colors.primary);
+            //console.log(`✅ Primary color set to: ${colors.primary}`);
+        }
+
+        // Apply secondary color (optional)
+        if (colors.secondary) {
+            root.style.setProperty('--secondary', colors.secondary);
+            //console.log(`✅ Secondary color set to: ${colors.secondary}`);
+        }
+
+        // Apply accent color (optional)
+        if (colors.accent) {
+            root.style.setProperty('--accent', colors.accent);
+            //console.log(`✅ Accent color set to: ${colors.accent}`);
+        }
+
+        // Apply success color (optional)
+        if (colors.success) {
+            root.style.setProperty('--success', colors.success);
+        }
+
+        // Apply warning color (optional)
+        if (colors.warning) {
+            root.style.setProperty('--warning', colors.warning);
+        }
+
+        // Apply error color (optional)
+        if (colors.error) {
+            root.style.setProperty('--error', colors.error);
+        }
+
+        // Apply dark mode primary color if defined
+        if (colors.primaryDark) {
+            this.applyDarkThemeColor('--primary', colors.primaryDark);
+            //console.log(`✅ Dark primary color set to: ${colors.primaryDark}`);
+        }
+
+        // Apply dark mode secondary color if defined
+        if (colors.secondaryDark) {
+            this.applyDarkThemeColor('--secondary', colors.secondaryDark);
+        }
+    },
+
+    /**
+     * Apply color specifically for dark mode
+     * @param {string} property - CSS variable name
+     * @param {string} value - Color value
+     */
+    applyDarkThemeColor(property, value) {
+        // Find or create dark theme style element
+        let darkThemeStyle = document.getElementById('geoflow-dark-theme');
+        
+        if (!darkThemeStyle) {
+            darkThemeStyle = document.createElement('style');
+            darkThemeStyle.id = 'geoflow-dark-theme';
+            document.head.appendChild(darkThemeStyle);
+        }
+
+        // Get existing rules
+        let rules = darkThemeStyle.sheet ? 
+            Array.from(darkThemeStyle.sheet.cssRules).map(rule => rule.cssText) : [];
+        
+        // Check if dark theme rule exists
+        let darkRuleIndex = rules.findIndex(rule => rule.includes('[data-theme="dark"]'));
+        
+        if (darkRuleIndex === -1) {
+            // Create new dark theme rule
+            darkThemeStyle.sheet.insertRule(`[data-theme="dark"] { ${property}: ${value}; }`, 0);
+        } else {
+            // Update existing rule
+            const existingRule = darkThemeStyle.sheet.cssRules[darkRuleIndex];
+            existingRule.style.setProperty(property, value);
         }
     },
 
@@ -149,13 +245,19 @@ const GeoFlowApp = {
             }
         }
 
-        document.getElementById('btn-fullscreen').addEventListener('click', () => {
-            GeoFlowMap.toggleFullscreen();
-        });
+        const btnFullscreen = document.getElementById('btn-fullscreen');
+        if (btnFullscreen) {
+            btnFullscreen.addEventListener('click', () => {
+                GeoFlowMap.toggleFullscreen();
+            });
+        }
 
-        document.getElementById('btn-home').addEventListener('click', () => {
-            GeoFlowMap.resetView();
-        });
+        const btnHome = document.getElementById('btn-home');
+        if (btnHome) {
+            btnHome.addEventListener('click', () => {
+                GeoFlowMap.resetView();
+            });
+        }
     },
 
     /**
@@ -171,7 +273,8 @@ const GeoFlowApp = {
             // Ctrl+F - Focus search
             if (GeoFlowConfig.isFeatureEnabled('search') && e.ctrlKey && e.key === 'f') {
                 e.preventDefault();
-                document.getElementById('search-input').focus();
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.focus();
             }
             
             // Ctrl+H - Home view

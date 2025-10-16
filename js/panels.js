@@ -78,6 +78,11 @@ const GeoFlowPanels = {
             return;
         }
 
+        // Cleanup previous panel before switching
+        if (this.currentPanel) {
+            this.cleanupCurrentPanel();
+        }
+
         // Update button states - exclude btn-legend from being deactivated
         document.querySelectorAll('.tool-btn').forEach(b => {
             if (b.id !== 'btn-legend') {
@@ -127,14 +132,91 @@ const GeoFlowPanels = {
      * Close the active panel
      */
     closePanel() {
+        // Cleanup before closing
+        this.cleanupCurrentPanel();
+        
         document.getElementById('panel').classList.remove('active');
+        
         // Remove active state from all buttons except btn-legend
         document.querySelectorAll('.tool-btn').forEach(b => {
             if (b.id !== 'btn-legend') {
                 b.classList.remove('active');
             }
         });
+        
         this.currentPanel = null;
+    },
+
+    /**
+     * Cleanup the current panel's active states
+     */
+    cleanupCurrentPanel() {
+        if (!this.currentPanel) return;
+
+        // Cleanup Draw panel
+        if (this.currentPanel === 'draw') {
+            this.cleanupDrawMode();
+        }
+
+        // Cleanup Measure panel
+        if (this.currentPanel === 'measure') {
+            this.cleanupMeasureMode();
+        }
+    },
+
+    /**
+     * Cleanup draw mode
+     */
+    cleanupDrawMode() {
+        if (typeof GeoFlowDraw !== 'undefined') {
+            // Call the module's cleanup method if available
+            if (typeof GeoFlowDraw.disableActiveDrawing === 'function') {
+                GeoFlowDraw.disableActiveDrawing();
+            }
+
+            // Additional cleanup for Leaflet.Draw
+            if (GeoFlowMap.map) {
+                // Disable any active drawing mode
+                GeoFlowMap.map.off('draw:drawstart');
+                GeoFlowMap.map.off('draw:drawstop');
+                
+                // Try to disable edit/delete modes
+                try {
+                    if (GeoFlowMap.map._editEnabled) {
+                        GeoFlowMap.map.fire('draw:editstop');
+                    }
+                    if (GeoFlowMap.map._deleteEnabled) {
+                        GeoFlowMap.map.fire('draw:deletestop');
+                    }
+                } catch (e) {
+                    // Ignore errors
+                }
+
+                // Reset cursor
+                const mapElement = document.getElementById('map');
+                if (mapElement) {
+                    mapElement.style.cursor = '';
+                }
+            }
+        }
+    },
+
+    /**
+     * Cleanup measure mode
+     */
+    cleanupMeasureMode() {
+        if (typeof GeoFlowMeasure !== 'undefined') {
+            // Call the module's cleanup method if available
+            if (typeof GeoFlowMeasure.disableActiveMeasure === 'function') {
+                GeoFlowMeasure.disableActiveMeasure();
+            }
+
+            // Reset cursor
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                mapElement.style.cursor = '';
+            }
+        }
     },
 
     /**

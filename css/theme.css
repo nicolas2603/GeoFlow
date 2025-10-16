@@ -1,11 +1,23 @@
 /* Theme Variables */
 :root {
+    /* Colors - Can be overridden by config.json */
     --primary: #2f89af;
+    --secondary: #278368;
+    --accent: #f59e0b;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    
+    /* Surface colors */
     --surface: rgba(255, 255, 255, 0.95);
     --bg-base: #ffffff;
+    
+    /* Text colors */
     --text-primary: #111827;
     --text-secondary: #6b7280;
     --text-tertiary: #9ca3af;
+    
+    /* Border and effects */
     --border-color: rgba(0, 0, 0, 0.06);
     --hover-bg: rgba(0, 0, 0, 0.02);
     --shadow: rgba(0, 0, 0, 0.1);
@@ -13,12 +25,24 @@
 }
 
 [data-theme="dark"] {
+    /* Colors - Can be overridden by config.json with primaryDark, etc. */
     --primary: #519cb3;
+    --secondary: #34a085;
+    --accent: #fbbf24;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --error: #f87171;
+    
+    /* Surface colors */
     --surface: rgba(17, 24, 39, 0.95);
     --bg-base: #111827;
+    
+    /* Text colors */
     --text-primary: #f9fafb;
     --text-secondary: #d1d5db;
     --text-tertiary: #9ca3af;
+    
+    /* Border and effects */
     --border-color: rgba(255, 255, 255, 0.1);
     --hover-bg: rgba(255, 255, 255, 0.05);
     --shadow: rgba(0, 0, 0, 0.3);

@@ -37,9 +37,34 @@ const GeoFlowBasemap = {
         let html = '';
         Object.entries(baseLayers).forEach(([key, config]) => {
             const isDefault = config.default ? 'active' : '';
+            
+            // Générer l'URL de la vignette preview
+            let previewUrl;
+            if (config.preview) {
+                // Si une preview personnalisée est définie
+                previewUrl = config.preview;
+            } else if (config.type === 'wmts') {
+                // Générer automatiquement une preview pour WMTS
+                // En utilisant des coordonnées centrées sur la France (z=6, x=32, y=22)
+                previewUrl = config.url
+                    .replace('{z}', '6')
+                    .replace('{x}', '32')
+                    .replace('{y}', '22')
+                    .replace('{TILEMATRIX}', '6')
+                    .replace('{TILECOL}', '32')
+                    .replace('{TILEROW}', '22');
+            } else {
+                // Pour les tuiles standards, utiliser la même logique
+                previewUrl = config.url
+                    .replace('{z}', '6')
+                    .replace('{x}', '32')
+                    .replace('{y}', '22')
+                    .replace('{s}', 'a');
+            }
+            
             html += `
                 <div class="basemap-item ${isDefault}" data-basemap="${key}">
-                    <img src="${config.preview}" alt="${config.name}">
+                    <img src="${previewUrl}" alt="${config.name}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23ddd%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2212%22 text-anchor=%22middle%22 dy=%22.3em%22%3E${config.name}%3C/text%3E%3C/svg%3E'">
                     <span class="tooltip-custom tooltip-top">${config.name}</span>
                 </div>
             `;
@@ -51,7 +76,29 @@ const GeoFlowBasemap = {
         const defaultBasemap = Object.entries(baseLayers).find(([, config]) => config.default);
         if (defaultBasemap) {
             const previewImg = document.getElementById('basemap-preview');
-            previewImg.src = defaultBasemap[1].preview;
+            const config = defaultBasemap[1];
+            
+            // Utiliser la même logique pour la preview du bouton
+            let previewUrl;
+            if (config.preview) {
+                previewUrl = config.preview;
+            } else if (config.type === 'wmts') {
+                previewUrl = config.url
+                    .replace('{z}', '6')
+                    .replace('{x}', '32')
+                    .replace('{y}', '22')
+                    .replace('{TILEMATRIX}', '6')
+                    .replace('{TILECOL}', '32')
+                    .replace('{TILEROW}', '22');
+            } else {
+                previewUrl = config.url
+                    .replace('{z}', '6')
+                    .replace('{x}', '32')
+                    .replace('{y}', '22')
+                    .replace('{s}', 'a');
+            }
+            
+            previewImg.src = previewUrl;
         }
 
         // Attach click listeners

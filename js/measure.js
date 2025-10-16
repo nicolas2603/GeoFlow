@@ -5,13 +5,25 @@
 
 const GeoFlowMeasure = {
     measureLayer: null,
+    measureGroup: null, // Separate group for measure layers
+    activeMeasureHandler: null, // Store active measure handler
+    measureCompleteHandler: null, // Store the event handler reference
+
+    /**
+     * Initialize measure module
+     */
+    init() {
+        // Create a separate feature group for measurements
+        this.measureGroup = new L.FeatureGroup();
+        GeoFlowMap.map.addLayer(this.measureGroup);
+    },
 
     /**
      * Get measure panel content HTML
      */
     getPanelContent() {
         return `
-            <div class="tool-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="tool-grid">
                 <div class="tool-card" data-measure="distance">
                     <i class="fa-solid fa-ruler"></i>
                     <div class="tool-card-label">Distance</div>
@@ -19,6 +31,10 @@ const GeoFlowMeasure = {
                 <div class="tool-card" data-measure="area">
                     <i class="fa-solid fa-vector-square"></i>
                     <div class="tool-card-label">Surface</div>
+                </div>
+                <div class="tool-card" data-measure="clear" style="border-color: #ef4444;">
+                    <i class="fa-solid fa-trash" style="color: #ef4444;"></i>
+                    <div class="tool-card-label" style="color: #ef4444;">Effacer</div>
                 </div>
             </div>
 
@@ -38,7 +54,12 @@ const GeoFlowMeasure = {
         document.querySelectorAll('[data-measure]').forEach(card => {
             card.addEventListener('click', () => {
                 const type = card.dataset.measure;
-                this.startMeasure(type);
+                
+                if (type === 'clear') {
+                    this.clearMeasure();
+                } else {
+                    this.startMeasure(type);
+                }
             });
         });
     },
@@ -48,9 +69,19 @@ const GeoFlowMeasure = {
      * @param {string} type - 'distance' or 'area'
      */
     startMeasure(type) {
-        // Remove previous measurement
+        // Disable any active measurement first
+        this.disableActiveMeasure();
+
+        // Remove previous measurement layer
         if (this.measureLayer) {
             GeoFlowMap.map.removeLayer(this.measureLayer);
+            this.measureLayer = null;
+        }
+
+        // Hide previous result
+        const resultDiv = document.getElementById('measure-result');
+        if (resultDiv) {
+            resultDiv.style.display = 'none';
         }
 
         const options = { 
@@ -62,27 +93,98 @@ const GeoFlowMeasure = {
         };
         
         if (type === 'distance') {
-            new L.Draw.Polyline(GeoFlowMap.map, options).enable();
+            this.activeMeasureHandler = new L.Draw.Polyline(GeoFlowMap.map, options);
+            this.activeMeasureHandler.enable();
         } else {
-            new L.Draw.Polygon(GeoFlowMap.map, options).enable();
+            this.activeMeasureHandler = new L.Draw.Polygon(GeoFlowMap.map, options);
+            this.activeMeasureHandler.enable();
         }
 
-        // Listen for measurement completion
-        GeoFlowMap.map.once(L.Draw.Event.CREATED, (e) => {
+        // Create a named handler function so we can remove it specifically
+        const measureCompleteHandler = (e) => {
             this.measureLayer = e.layer;
-            GeoFlowMap.map.addLayer(this.measureLayer);
+            
+            // Add to measureGroup instead of map directly
+            this.measureGroup.addLayer(this.measureLayer);
 
             const resultDiv = document.getElementById('measure-result');
             const valueDiv = document.getElementById('measure-value');
-            resultDiv.style.display = 'block';
+            
+            if (resultDiv && valueDiv) {
+                resultDiv.style.display = 'block';
 
-            if (type === 'distance') {
-                const length = GeoFlowUtils.calculateLength(this.measureLayer.getLatLngs());
-                valueDiv.textContent = GeoFlowUtils.formatDistance(length);
-            } else {
-                const area = L.GeometryUtil.geodesicArea(this.measureLayer.getLatLngs()[0]);
-                valueDiv.textContent = GeoFlowUtils.formatArea(area);
+                if (type === 'distance') {
+                    const length = GeoFlowUtils.calculateLength(this.measureLayer.getLatLngs());
+                    valueDiv.textContent = GeoFlowUtils.formatDistance(length);
+                    GeoFlowUtils.showToast(`Distance: ${GeoFlowUtils.formatDistance(length)}`, 'success');
+                } else {
+                    const area = L.GeometryUtil.geodesicArea(this.measureLayer.getLatLngs()[0]);
+                    valueDiv.textContent = GeoFlowUtils.formatArea(area);
+                    GeoFlowUtils.showToast(`Surface: ${GeoFlowUtils.formatArea(area)}`, 'success');
+                }
             }
-        });
+
+            // Clean up after measurement is complete
+            this.disableActiveMeasure();
+            
+            // Remove THIS specific handler
+            GeoFlowMap.map.off(L.Draw.Event.CREATED, measureCompleteHandler);
+        };
+
+        // Store reference to the handler
+        this.measureCompleteHandler = measureCompleteHandler;
+
+        // Listen for measurement completion
+        GeoFlowMap.map.on(L.Draw.Event.CREATED, measureCompleteHandler);
+    },
+
+    /**
+     * Clear current measurement
+     */
+    clearMeasure() {
+        // Remove measurement layer
+        if (this.measureLayer) {
+            this.measureGroup.removeLayer(this.measureLayer);
+            this.measureLayer = null;
+        }
+
+        // Disable any active measurement
+        this.disableActiveMeasure();
+
+        // Hide result
+        const resultDiv = document.getElementById('measure-result');
+        if (resultDiv) {
+            resultDiv.style.display = 'none';
+        }
+
+        GeoFlowUtils.showToast('Mesure effacée', 'success');
+    },
+
+    /**
+     * Disable any active measurement
+     */
+    disableActiveMeasure() {
+        if (this.activeMeasureHandler) {
+            try {
+                if (typeof this.activeMeasureHandler.disable === 'function') {
+                    this.activeMeasureHandler.disable();
+                }
+            } catch (e) {
+                console.warn('Error disabling measure handler:', e);
+            }
+            this.activeMeasureHandler = null;
+        }
+
+        // Remove ONLY the measure-specific event listener
+        if (this.measureCompleteHandler) {
+            GeoFlowMap.map.off(L.Draw.Event.CREATED, this.measureCompleteHandler);
+            this.measureCompleteHandler = null;
+        }
+
+        // Reset cursor
+        const mapElement = document.getElementById('map');
+        if (mapElement) {
+            mapElement.style.cursor = '';
+        }
     }
 };

@@ -35,10 +35,37 @@ const GeoFlowMap = {
         let defaultLayer = null;
 
         Object.entries(baseLayers).forEach(([key, config]) => {
-            const layer = L.tileLayer(config.url, {
-                attribution: config.attribution,
-                maxZoom: config.maxZoom
-            });
+            let layer;
+            
+            // Support différents types de couches
+            if (config.type === 'wmts') {
+                // Service WMTS
+                layer = L.tileLayer(config.url, {
+                    attribution: config.attribution || '',
+                    maxZoom: config.maxZoom || 18,
+                    minZoom: config.minZoom || 0,
+                    tileSize: config.tileSize || 256,
+                    crossOrigin: true
+                });
+                // console.log(`✅ WMTS layer created: ${config.name}`);
+            } else if (config.type === 'wms') {
+                // Service WMS
+                layer = L.tileLayer.wms(config.url, {
+                    layers: config.layers || '',
+                    format: config.format || 'image/png',
+                    transparent: config.transparent !== false,
+                    attribution: config.attribution || '',
+                    maxZoom: config.maxZoom || 18
+                });
+                // console.log(`✅ WMS layer created: ${config.name}`);
+            } else {
+                // Service Tile standard (OSM, etc.)
+                layer = L.tileLayer(config.url, {
+                    attribution: config.attribution,
+                    maxZoom: config.maxZoom
+                });
+                // console.log(`✅ Tile layer created: ${config.name}`);
+            }
 
             this.baseLayers[key] = layer;
 
@@ -59,7 +86,7 @@ const GeoFlowMap = {
 
     /**
      * Switch basemap
-     * @param {string} type - Basemap type (osm, satellite, topo, positron, darkmatter)
+     * @param {string} type - Basemap type (osm, satellite, topo, positron, darkmatter, etc.)
      */
     switchBasemap(type) {
         Object.values(this.baseLayers).forEach(layer => this.map.removeLayer(layer));

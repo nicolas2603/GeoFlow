@@ -5,11 +5,52 @@
 
 const GeoFlowUtils = {
     /**
-     * Show loading spinner
+     * Show loading spinner with custom message
+     * @param {string} message - The message to display (default: 'Chargement de l'application...')
      */
-    showLoading() {
+    showLoading(message = 'Chargement de l\'application...') {
         const loading = document.getElementById('loading');
-        loading.classList.add('active');
+        
+        if (loading) {
+            // Update message if loading already exists
+            const loadingText = loading.querySelector('.loading-text');
+            if (loadingText) {
+                loadingText.textContent = message;
+            }
+            loading.classList.add('active');
+        } else {
+            // Create loading overlay if it doesn't exist
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = 'loading';
+            loadingDiv.className = 'active';
+            loadingDiv.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(255, 255, 255, 0.95);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                backdrop-filter: blur(4px);
+            `;
+            
+            loadingDiv.innerHTML = `
+                <div style="text-align: center;">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <div class="loading-text" style="margin-top: 1rem; font-size: 1rem; color: var(--text-primary); font-weight: 500;">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(loadingDiv);
+        }
     },
 
     /**
@@ -17,7 +58,9 @@ const GeoFlowUtils = {
      */
     hideLoading() {
         const loading = document.getElementById('loading');
-        loading.classList.remove('active');
+        if (loading) {
+            loading.classList.remove('active');
+        }
     },
 
     /**

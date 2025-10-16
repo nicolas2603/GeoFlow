@@ -1,5 +1,6 @@
 /**
- * GeoFlow Print Module - Version simplifiée fonctionnelle
+ * GeoFlow Print Module - Version optimisée avec html2canvas uniquement
+ * Solution plus fiable et compatible - PRIORITÉ HAUTEUR 100%
  */
 
 const GeoFlowPrint = {
@@ -11,6 +12,7 @@ const GeoFlowPrint = {
     },
 
     currentFormat: 'a4-landscape',
+    previewMapImage: null,
 
     getPanelContent() {
         return `
@@ -22,6 +24,20 @@ const GeoFlowPrint = {
                     ${Object.entries(this.printFormats).map(([key, format]) => `
                         <option value="${key}" ${key === this.currentFormat ? 'selected' : ''}>${format.label}</option>
                     `).join('')}
+                </select>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
+                    Échelle
+                </label>
+                <select id="print-scale" class="form-select form-select-sm">
+                    <option value="free">Emprise actuelle (libre)</option>
+                    <option value="5000">1:5 000</option>
+                    <option value="10000">1:10 000</option>
+                    <option value="25000">1:25 000</option>
+                    <option value="50000">1:50 000</option>
+                    <option value="100000">1:100 000</option>
                 </select>
             </div>
 
@@ -61,10 +77,6 @@ const GeoFlowPrint = {
                     <i class="fa-solid fa-file-pdf"></i> Générer PDF
                 </button>
             </div>
-
-            <div style="margin-top: 12px; padding: 8px 10px; background: var(--hover-bg); border-radius: 6px; font-size: 0.72rem; color: var(--text-secondary);">
-                <i class="fa-solid fa-circle-info"></i> Nécessite html2canvas et jsPDF
-            </div>
         `;
     },
 
@@ -74,144 +86,358 @@ const GeoFlowPrint = {
 
         if (previewBtn) {
             previewBtn.addEventListener('click', () => {
-                console.log('Preview clicked');
                 this.showPreview();
             });
         }
 
         if (generateBtn) {
             generateBtn.addEventListener('click', () => {
-                console.log('Generate clicked');
                 this.generatePDF();
             });
         }
     },
 
-    showPreview() {
-        const config = this.getConfig();
-        console.log('Showing preview with config:', config);
+    /**
+     * Applique temporairement l'échelle demandée (sans modifier la carte visible)
+     * Retourne le zoom original pour restauration
+     */
+    applyTemporaryScale(scaleValue) {
+        const originalZoom = GeoFlowMap.map.getZoom();
         
-        // Get active layers from GeoFlowLayers state instead of DOM
-        const activeLayerIds = Array.from(GeoFlowLayers.activeLayerIds);
-        console.log('Active layer IDs from state:', activeLayerIds);
-        
-        let legendHTML = '';
-        
-        if (config.legend && activeLayerIds.length > 0) {
-            activeLayerIds.forEach(layerId => {
-                const legendData = GeoFlowConfig.legends[layerId];
-                
-                // Get layer name from config
-                let layerName = layerId;
-                if (GeoFlowConfig.layersConfig && GeoFlowConfig.layersConfig.themes) {
-                    GeoFlowConfig.layersConfig.themes.forEach(theme => {
-                        const layer = theme.layers.find(l => l.id === layerId);
-                        if (layer) layerName = layer.name;
-                    });
-                }
-                
-                console.log('Processing layer:', layerId, 'Name:', layerName, 'Has legend data:', !!legendData);
-                
-                if (legendData && legendData.items) {
-                    console.log('Legend items:', legendData.items.length);
-                    legendHTML += `<div style="margin-bottom:10px;">`;
-                    legendHTML += `<div style="font-weight:600;font-size:0.8rem;margin-bottom:4px;color:#374151;">${layerName}</div>`;
-                    legendData.items.forEach(legendItem => {
-                        legendHTML += `
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-                                <div style="width:14px;height:14px;background:${legendItem.color};border-radius:2px;flex-shrink:0;"></div>
-                                <span style="font-size:0.7rem;">${legendItem.label}</span>
-                            </div>
-                        `;
-                    });
-                    legendHTML += `</div>`;
-                }
-            });
+        if (scaleValue === 'free') {
+            return originalZoom; // Garder l'emprise actuelle
         }
         
-        console.log('Legend HTML length:', legendHTML.length);
+        const scale = parseInt(scaleValue);
         
-        const logoPath = GeoFlowConfig.theme.logo || 'assets/logo.svg';
-        const logoHTML = (logoPath.endsWith('.png') || logoPath.endsWith('.jpg')) 
-            ? `<img src="${logoPath}" style="height:40px;width:auto;object-fit:contain;" onerror="this.style.display='none'">`
-            : '<div style="color:#6b7280;font-size:0.8rem;">Logo</div>';
+        // Calculer le zoom correspondant à l'échelle
+        // Formule : zoom ≈ log2(156543.04 / scale * cos(lat))
+        const center = GeoFlowMap.map.getCenter();
+        const lat = center.lat * Math.PI / 180;
+        const metersPerPixel = scale / 96 * 0.0254; // 96 DPI standard
+        const zoom = Math.log2(156543.04 * Math.cos(lat) / metersPerPixel);
         
-        const modal = document.createElement('div');
-        modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+        const targetZoom = Math.round(zoom);
+        GeoFlowMap.map.setZoom(targetZoom);
         
-        modal.innerHTML = `
-            <div style="background:white;border-radius:12px;width:90vw;max-width:1000px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
-                <div style="padding:16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-                    <h5 style="margin:0;font-size:1rem;color:#111827;">
-                        <i class="fa-solid fa-eye"></i> Aperçu - ${config.title}
-                    </h5>
-                    <button id="close-preview" style="border:none;background:#f3f4f6;width:32px;height:32px;border-radius:6px;cursor:pointer;">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <div style="flex:1;overflow:auto;padding:20px;background:#f3f4f6;">
-                    <div style="background:white;margin:0 auto;padding:15px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:900px;">
-                        <!-- HEADER -->
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e5e7eb;">
-                            <div style="font-size:1.1rem;font-weight:bold;color:#1f2937;">${config.title}</div>
-                            ${logoHTML}
-                        </div>
-                        
-                        <!-- BODY: Map + Legend -->
-                        <div style="display:flex;gap:12px;min-height:400px;">
-                            <!-- Map -->
-                            <div style="flex:1;border:2px solid #e5e7eb;display:flex;align-items:center;justify-content:center;background:#f9fafb;position:relative;">
-                                <div style="text-align:center;color:#9ca3af;">
-                                    <i class="fa-solid fa-map" style="font-size:2.5rem;margin-bottom:8px;"></i>
-                                    <div style="font-size:0.85rem;font-weight:600;">Carte capturée</div>
-                                    <div style="font-size:0.7rem;margin-top:4px;">Toutes les couches visibles seront incluses</div>
-                                </div>
-                                ${config.northArrow ? '<div style="position:absolute;top:8px;right:8px;width:35px;height:35px;background:white;border:2px solid #3b82f6;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1);"><i class="fa-solid fa-arrow-up" style="color:#3b82f6;font-size:1rem;"></i></div>' : ''}
-                                ${config.scaleBar ? '<div style="position:absolute;bottom:8px;left:8px;background:white;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.7rem;box-shadow:0 2px 4px rgba(0,0,0,0.1);">0____500m</div>' : ''}
-                            </div>
-                            
-                            <!-- Legend -->
-                            ${config.legend ? `
-                                <div style="width:180px;flex-shrink:0;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;overflow-y:auto;">
-                                    <div style="font-weight:700;font-size:0.85rem;color:#1f2937;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">LÉGENDE</div>
-                                    ${legendHTML || '<div style="font-size:0.75rem;color:#9ca3af;">Aucune couche active</div>'}
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <!-- FOOTER -->
-                        <div style="margin-top:10px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:0.7rem;color:#6b7280;display:flex;justify-content:space-between;">
-                            <div><strong>GeoFlow</strong> © ${new Date().toLocaleDateString('fr-FR')}</div>
-                            <div>Format: ${this.printFormats[config.format].label}</div>
-                        </div>
-                    </div>
-                </div>
-                <div style="padding:16px;border-top:1px solid #e5e7eb;display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;">
-                    <button id="cancel-preview" class="btn btn-sm btn-secondary">Fermer</button>
-                    <button id="confirm-pdf" class="btn btn-sm btn-success"><i class="fa-solid fa-file-pdf"></i> Générer PDF</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-
-        const close = () => {
-            console.log('Closing modal');
-            modal.remove();
-        };
-
-        modal.querySelector('#close-preview').onclick = close;
-        modal.querySelector('#cancel-preview').onclick = close;
-        modal.onclick = (e) => { if(e.target === modal) close(); };
-        modal.querySelector('#confirm-pdf').onclick = () => {
-            close();
-            this.generatePDF();
-        };
+        return originalZoom;
     },
 
-    async generatePDF() {
-        console.log('=== START PDF GENERATION ===');
+    /**
+     * Capture la carte avec html2canvas de manière optimisée
+     * SANS déformation - respect du ratio original
+     */
+    async captureMap(options = {}) {
+        const defaultOptions = {
+            scale: 1,
+            quality: 0.8,
+            format: 'jpeg'
+        };
         
+        const opts = { ...defaultOptions, ...options };
+                
+        // Masquer temporairement les éléments UI
+        const elementsToHide = [
+            '.toolbar',
+            '.search-bar',
+            '.panel',
+            '.legend-widget',
+            '.actions',
+            '.basemap-gallery',
+            '.toast-container',
+            '.leaflet-control-container'
+        ];
+        
+        const hiddenElements = [];
+        elementsToHide.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                if (el.style.display !== 'none') {
+                    hiddenElements.push({ el, originalDisplay: el.style.display });
+                    el.style.display = 'none';
+                }
+            });
+        });
+
+        // Hide measure layers during capture
+        let measureGroupHidden = false;
+        if (typeof GeoFlowMeasure !== 'undefined' && GeoFlowMeasure.measureGroup) {
+            if (GeoFlowMap.map.hasLayer(GeoFlowMeasure.measureGroup)) {
+                GeoFlowMap.map.removeLayer(GeoFlowMeasure.measureGroup);
+                measureGroupHidden = true;
+            }
+        }
+        
+        // Sauvegarder et neutraliser les transformations SVG de Leaflet
+        const svgElements = document.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
+        const savedTransforms = [];
+        
+        svgElements.forEach(svg => {
+            savedTransforms.push({
+                element: svg,
+                transform: svg.style.transform,
+                viewBox: svg.getAttribute('viewBox')
+            });
+            
+            // Neutraliser la transformation
+            svg.style.transform = 'translate3d(0px, 0px, 0px)';
+            
+            // Ajuster le viewBox pour compenser
+            const currentViewBox = svg.getAttribute('viewBox');
+            if (currentViewBox) {
+                const values = currentViewBox.split(' ').map(Number);
+                svg.setAttribute('viewBox', `0 0 ${values[2]} ${values[3]}`);
+            }
+        });
+        
+        try {
+            // Attendre que les modifications soient appliquées + que les tuiles se chargent
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            const mapContainer = document.getElementById('map');
+            
+            const canvas = await html2canvas(mapContainer, {
+                useCORS: true,
+                allowTaint: false,
+                logging: false,
+                scale: opts.scale,
+                backgroundColor: '#ffffff',
+                foreignObjectRendering: false,
+                imageTimeout: 0,
+                removeContainer: false
+            });
+            
+            // Restaurer toutes les transformations SVG
+            savedTransforms.forEach(({ element, transform, viewBox }) => {
+                element.style.transform = transform;
+                if (viewBox) {
+                    element.setAttribute('viewBox', viewBox);
+                }
+            });
+
+            // Restore measure layers
+            if (measureGroupHidden && GeoFlowMeasure.measureGroup) {
+                GeoFlowMap.map.addLayer(GeoFlowMeasure.measureGroup);
+            }
+            
+            // Restaurer les éléments UI
+            hiddenElements.forEach(({ el, originalDisplay }) => {
+                el.style.display = originalDisplay;
+            });
+            
+            // Convertir en data URL
+            const imageFormat = opts.format === 'png' ? 'image/png' : 'image/jpeg';
+            const dataUrl = canvas.toDataURL(imageFormat, opts.quality);
+            
+            return { canvas, dataUrl };
+            
+        } catch (error) {
+            // Restaurer tout en cas d'erreur
+            savedTransforms.forEach(({ element, transform, viewBox }) => {
+                element.style.transform = transform;
+                if (viewBox) {
+                    element.setAttribute('viewBox', viewBox);
+                }
+            });
+
+            // Restore measure layers on error
+            if (measureGroupHidden && GeoFlowMeasure.measureGroup) {
+                GeoFlowMap.map.addLayer(GeoFlowMeasure.measureGroup);
+            }
+
+            hiddenElements.forEach(({ el, originalDisplay }) => {
+                el.style.display = originalDisplay;
+            });
+            throw error;
+        }
+    },
+
+    async showPreview() {
+        const config = this.getConfig();
+        
+        // Show loading with custom message
+        GeoFlowUtils.showLoading('Génération de l\'aperçu...');
+        
+        try {
+            // Appliquer temporairement l'échelle
+            const originalZoom = this.applyTemporaryScale(config.scale);
+            
+            // Attendre que le zoom soit appliqué et que les tuiles se chargent
+            await new Promise(resolve => setTimeout(resolve, 500));
+        
+            // Calculer le ratio cible exactement comme pour le PDF
+            const format = this.printFormats[config.format];
+            const width = format.width;
+            const height = format.height;
+            const marginX = 10;
+            const marginY = 10;
+            const footerHeight = 12;
+            const headerHeight = 18;
+            
+            const availableWidth = width - (marginX * 2);
+            const availableHeight = height - marginY - headerHeight - marginY - footerHeight;
+            
+            const activeLayerIds = Array.from(GeoFlowLayers.activeLayerIds);
+            const hasLegend = config.legend && activeLayerIds.length > 0;
+            
+            let mapWidth;
+            if (hasLegend) {
+                const legendWidth = 50;
+                mapWidth = availableWidth - legendWidth - 3;
+            } else {
+                mapWidth = availableWidth;
+            }
+            
+            const targetAspect = mapWidth / availableHeight;
+
+            // REDIMENSIONNER temporairement la div map pour l'aperçu
+            const mapContainer = document.getElementById('map');
+            const originalWidth = mapContainer.offsetWidth;
+            const originalHeight = mapContainer.offsetHeight;
+            
+            let newWidth, newHeight;
+            if (originalHeight * targetAspect <= originalWidth) {
+                newHeight = originalHeight;
+                newWidth = Math.round(newHeight * targetAspect);
+            } else {
+                newWidth = originalWidth;
+                newHeight = Math.round(newWidth / targetAspect);
+            }
+                       
+            mapContainer.style.width = newWidth + 'px';
+            mapContainer.style.height = newHeight + 'px';
+            GeoFlowMap.map.invalidateSize();
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Capture rapide pour l'aperçu avec le bon ratio
+            const { dataUrl } = await this.captureMap({
+                scale: 0.5,
+                quality: 0.7,
+                format: 'jpeg'
+            });
+            
+            // RESTAURER la taille ET le zoom originaux immédiatement
+            mapContainer.style.width = originalWidth + 'px';
+            mapContainer.style.height = originalHeight + 'px';
+            GeoFlowMap.map.setZoom(originalZoom);
+            GeoFlowMap.map.invalidateSize();
+                        
+            this.previewMapImage = dataUrl;
+            
+            GeoFlowUtils.hideLoading();
+            
+            // Build legend HTML            
+            let legendHTML = '';
+            
+            if (config.legend && activeLayerIds.length > 0) {
+                activeLayerIds.forEach(layerId => {
+                    const legendData = GeoFlowConfig.legends[layerId];
+                    
+                    let layerName = layerId;
+                    if (GeoFlowConfig.layersConfig && GeoFlowConfig.layersConfig.themes) {
+                        GeoFlowConfig.layersConfig.themes.forEach(theme => {
+                            const layer = theme.layers.find(l => l.id === layerId);
+                            if (layer) layerName = layer.name;
+                        });
+                    }
+                    
+                    if (legendData && legendData.items) {
+                        legendHTML += `<div style="margin-bottom:10px;">`;
+                        legendHTML += `<div style="font-weight:600;font-size:0.8rem;margin-bottom:4px;color:#374151;">${layerName}</div>`;
+                        legendData.items.forEach(legendItem => {
+                            legendHTML += `
+                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                                    <div style="width:14px;height:14px;background:${legendItem.color};border-radius:2px;flex-shrink:0;"></div>
+                                    <span style="font-size:0.7rem;">${legendItem.label}</span>
+                                </div>
+                            `;
+                        });
+                        legendHTML += `</div>`;
+                    }
+                });
+            }
+            
+            const logoPath = GeoFlowConfig.theme.logo || 'assets/logo.svg';
+            const logoHTML = (logoPath.endsWith('.png') || logoPath.endsWith('.jpg')) 
+                ? `<img src="${logoPath}" style="height:40px;width:auto;object-fit:contain;" onerror="this.style.display='none'">`
+                : '<div style="color:#6b7280;font-size:0.8rem;">Logo</div>';
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+            
+            modal.innerHTML = `
+                <div style="background:white;border-radius:12px;width:90vw;max-width:1000px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                    <div style="padding:16px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                        <h5 style="margin:0;font-size:1rem;color:#111827;">
+                            <i class="fa-solid fa-eye"></i> Aperçu - ${config.title}
+                        </h5>
+                        <button id="close-preview" style="border:none;background:#f3f4f6;width:32px;height:32px;border-radius:6px;cursor:pointer;">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div style="flex:1;overflow:auto;padding:20px;background:#f3f4f6;">
+                        <div style="background:white;margin:0 auto;padding:15px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:900px;">
+                            <!-- HEADER -->
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:8px;border:1px solid #000;">
+                                <div style="font-size:1.1rem;font-weight:bold;color:#1f2937;">${config.title}</div>
+                                ${logoHTML}
+                            </div>
+                            
+                            <!-- BODY: Map + Legend -->
+                            <div style="display:flex;gap:3px;min-height:400px;">
+                                <!-- Map with REAL capture - 100% fill -->
+                                <div style="flex:1;border:1px solid #000;display:flex;align-items:center;justify-content:center;background:#f9fafb;position:relative;overflow:hidden;">
+                                    <img src="${this.previewMapImage}" style="width:100%;height:100%;object-fit:fill;" alt="Carte">
+                                    ${config.northArrow ? '<div style="position:absolute;top:8px;right:8px;width:35px;height:35px;background:white;border:2px solid #3b82f6;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1);"><i class="fa-solid fa-arrow-up" style="color:#3b82f6;font-size:1rem;"></i></div>' : ''}
+                                    ${config.scaleBar ? `<div style="position:absolute;bottom:8px;left:8px;background:white;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.7rem;box-shadow:0 2px 4px rgba(0,0,0,0.1);">${this.getScaleBarText(config.scale)}</div>` : ''}
+                                </div>
+                                
+                                <!-- Legend -->
+                                ${config.legend ? `
+                                    <div style="width:180px;flex-shrink:0;padding:10px;background:#f9fafb;border:1px solid #000;overflow-y:auto;">
+                                        <div style="font-weight:700;font-size:0.85rem;color:#1f2937;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">LÉGENDE</div>
+                                        ${legendHTML || '<div style="font-size:0.75rem;color:#9ca3af;">Aucune couche active</div>'}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            <!-- FOOTER -->
+                            <div style="margin-top:3px;padding:8px;border:1px solid #000;font-size:0.7rem;color:#000;display:flex;justify-content:space-between;">
+                                <div><strong>GeoFlow</strong> © ${new Date().toLocaleDateString('fr-FR')}</div>
+                                <div>Format: ${this.printFormats[config.format].label}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding:16px;border-top:1px solid #e5e7eb;display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;">
+                        <button id="cancel-preview" class="btn btn-sm btn-secondary">Fermer</button>
+                        <button id="confirm-pdf" class="btn btn-sm btn-success"><i class="fa-solid fa-file-pdf"></i> Générer PDF</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+
+            const close = () => {
+                modal.remove();
+            };
+
+            modal.querySelector('#close-preview').onclick = close;
+            modal.querySelector('#cancel-preview').onclick = close;
+            modal.onclick = (e) => { if(e.target === modal) close(); };
+            modal.querySelector('#confirm-pdf').onclick = () => {
+                close();
+                this.generatePDF();
+            };
+                        
+        } catch (error) {
+            GeoFlowUtils.hideLoading();
+            console.error('=== PREVIEW ERROR ===', error);
+            GeoFlowUtils.showToast('Erreur lors de la capture: ' + error.message, 'error');
+        }
+    },
+
+    async generatePDF() {       
         // Check libraries
         if (typeof html2canvas === 'undefined') {
             alert('html2canvas non chargé ! Vérifiez index.html');
@@ -225,32 +451,82 @@ const GeoFlowPrint = {
             return;
         }
 
-        console.log('Libraries OK');
-        GeoFlowUtils.showLoading();
+        GeoFlowUtils.showLoading('Impression de la carte...');
 
         try {
             const config = this.getConfig();
-            console.log('Config:', config);
-
-            const mapElement = document.getElementById('map');
-            console.log('Map element:', mapElement);
-
-            // Capture map
-            console.log('Starting html2canvas...');
-            const canvas = await html2canvas(mapElement, {
-                useCORS: true,
-                allowTaint: false,
-                logging: false,
-                scale: 2
-            });
             
-            console.log('Canvas created:', canvas.width, 'x', canvas.height);
+            // Appliquer temporairement l'échelle
+            const originalZoom = this.applyTemporaryScale(config.scale);
+            
+            // Attendre que le zoom soit appliqué et que les tuiles se chargent
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            // Create PDF
-            const { jsPDF } = window.jspdf;
+            // Calculer les dimensions de l'espace carte dans le PDF
             const format = this.printFormats[config.format];
             const width = format.width;
             const height = format.height;
+            const marginX = 10;
+            const marginY = 10;
+            const footerHeight = 12;
+            const headerHeight = 18;
+            
+            const availableWidth = width - (marginX * 2);
+            const availableHeight = height - marginY - headerHeight - marginY - footerHeight;
+            
+            const activeLayerIds = Array.from(GeoFlowLayers.activeLayerIds);
+            const hasLegend = config.legend && activeLayerIds.length > 0;
+            
+            let mapWidth, legendWidth;
+            if (hasLegend) {
+                legendWidth = 50;
+                mapWidth = availableWidth - legendWidth - 3;
+            } else {
+                mapWidth = availableWidth;
+                legendWidth = 0;
+            }
+            
+            // Ratio cible de l'espace carte dans le PDF
+            const targetAspect = mapWidth / availableHeight;
+
+            // REDIMENSIONNER temporairement la div map pour correspondre au ratio PDF
+            const mapContainer = document.getElementById('map');
+            const originalWidth = mapContainer.offsetWidth;
+            const originalHeight = mapContainer.offsetHeight;
+                        
+            // Calculer les nouvelles dimensions pour avoir le ratio exact
+            let newWidth, newHeight;
+            if (originalHeight * targetAspect <= originalWidth) {
+                newHeight = originalHeight;
+                newWidth = Math.round(newHeight * targetAspect);
+            } else {
+                newWidth = originalWidth;
+                newHeight = Math.round(newWidth / targetAspect);
+            }
+                        
+            // Appliquer le redimensionnement temporaire
+            mapContainer.style.width = newWidth + 'px';
+            mapContainer.style.height = newHeight + 'px';
+            GeoFlowMap.map.invalidateSize();
+            
+            // Attendre que Leaflet ait fini de redessiner
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Maintenant capturer avec le bon ratio
+            const { canvas } = await this.captureMap({
+                scale: 2,
+                quality: 0.95,
+                format: 'png'
+            });
+                        
+            // RESTAURER la taille ET le zoom originaux immédiatement
+            mapContainer.style.width = originalWidth + 'px';
+            mapContainer.style.height = originalHeight + 'px';
+            GeoFlowMap.map.setZoom(originalZoom);
+            GeoFlowMap.map.invalidateSize();
+            
+            // Create PDF
+            const { jsPDF } = window.jspdf;
             const orientation = width > height ? 'landscape' : 'portrait';
             
             const pdf = new jsPDF({
@@ -260,93 +536,54 @@ const GeoFlowPrint = {
                 compress: true
             });
 
-            console.log('PDF created');
-
-            const marginX = 10;
-            const marginY = 10;
             let currentY = marginY;
 
             // === HEADER: Title + Logo ===
             const logoPath = GeoFlowConfig.theme.logo || 'assets/logo.svg';
             
+            // Bordure du header
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.rect(marginX, marginY, availableWidth, 15);
+            
             pdf.setFontSize(14);
             pdf.setFont(undefined, 'bold');
-            pdf.text(config.title, marginX, currentY + 8);
+            pdf.text(config.title, marginX + 3, currentY + 8);
             
             // Try to add logo if PNG/JPG
             if (logoPath.endsWith('.png') || logoPath.endsWith('.jpg')) {
                 try {
                     const logoImg = await this.loadImage(logoPath);
-                    const logoHeight = 12;
+                    const logoHeight = 10;
                     const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
-                    pdf.addImage(logoImg.src, 'PNG', width - marginX - logoWidth, currentY, logoWidth, logoHeight);
-                    console.log('Logo added');
+                    pdf.addImage(logoImg.src, 'PNG', width - marginX - logoWidth - 3, currentY + 2.5, logoWidth, logoHeight);
                 } catch (e) {
                     console.warn('Could not load logo:', e);
                 }
             }
             
             currentY += 15;
-            
-            // Separator line
-            pdf.setDrawColor(229, 231, 235);
-            pdf.setLineWidth(0.5);
-            pdf.line(marginX, currentY, width - marginX, currentY);
-            currentY += 5;
+            currentY += 3;
 
             // === BODY: Map + Legend ===
-            const footerHeight = 15;
-            const availableHeight = height - currentY - marginY - footerHeight;
-            const availableWidth = width - (marginX * 2);
-            
-            // Check for active layers - from GeoFlowLayers state
-            const activeLayerIds = Array.from(GeoFlowLayers.activeLayerIds);
-            console.log('Active layer IDs in PDF:', activeLayerIds);
-            const hasLegend = config.legend && activeLayerIds.length > 0;
-            
-            let mapWidth, legendWidth, legendX;
-            if (hasLegend) {
-                legendWidth = 45;
-                mapWidth = availableWidth - legendWidth - 5;
-                legendX = marginX + mapWidth + 5;
-            } else {
-                mapWidth = availableWidth;
-                legendWidth = 0;
-            }
+            const legendX = marginX + mapWidth + 3;
 
-            // Add map image with proper scaling
+            // Bordure de la carte
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.rect(marginX, currentY, mapWidth, availableHeight);
+
+            // Add map image - MAINTENANT LE CANVAS A EXACTEMENT LE BON RATIO
             const imgData = canvas.toDataURL('image/png', 0.95);
-            const canvasAspect = canvas.width / canvas.height;
-            const mapAspect = mapWidth / availableHeight;
             
-            let finalMapWidth, finalMapHeight;
-            if (canvasAspect > mapAspect) {
-                finalMapHeight = availableHeight;
-                finalMapWidth = availableHeight * canvasAspect;
-                if (finalMapWidth > mapWidth) {
-                    finalMapWidth = mapWidth;
-                    finalMapHeight = mapWidth / canvasAspect;
-                }
-            } else {
-                finalMapWidth = mapWidth;
-                finalMapHeight = mapWidth / canvasAspect;
-                if (finalMapHeight > availableHeight) {
-                    finalMapHeight = availableHeight;
-                    finalMapWidth = availableHeight * canvasAspect;
-                }
-            }
-            
-            const mapX = marginX + (mapWidth - finalMapWidth) / 2;
-            const mapY = currentY + (availableHeight - finalMapHeight) / 2;
-            
-            pdf.addImage(imgData, 'PNG', mapX, mapY, finalMapWidth, finalMapHeight);
-            console.log('Map image added');
+            // Remplir 100% de l'espace disponible
+            pdf.addImage(imgData, 'PNG', marginX, currentY, mapWidth, availableHeight);
 
             // Add north arrow if enabled
             if (config.northArrow) {
                 const arrowSize = 8;
-                const arrowX = mapX + finalMapWidth - arrowSize - 3;
-                const arrowY = mapY + 3;
+                const arrowX = marginX + mapWidth - arrowSize - 3;
+                const arrowY = currentY + 3;
                 
                 pdf.setDrawColor(59, 130, 246);
                 pdf.setFillColor(255, 255, 255);
@@ -359,14 +596,13 @@ const GeoFlowPrint = {
                 pdf.setFontSize(6);
                 pdf.text('N', arrowX + arrowSize/2 + 1.5, arrowY + arrowSize/2 + 2);
                 pdf.setTextColor(0, 0, 0);
-                console.log('North arrow added');
             }
 
             // Add scale bar if enabled
             if (config.scaleBar) {
                 const scaleBarWidth = 25;
-                const scaleY = mapY + finalMapHeight - 5;
-                const scaleX = mapX + 3;
+                const scaleY = currentY + availableHeight - 5;
+                const scaleX = marginX + 3;
                 
                 pdf.setDrawColor(0, 0, 0);
                 pdf.setFillColor(255, 255, 255);
@@ -379,19 +615,22 @@ const GeoFlowPrint = {
                 pdf.line(scaleX + scaleBarWidth, scaleY - 1.5, scaleX + scaleBarWidth, scaleY + 1.5);
                 
                 pdf.setFontSize(7);
-                pdf.text('500 m', scaleX + scaleBarWidth + 2, scaleY + 1);
-                console.log('Scale bar added');
+                pdf.text(this.getScaleBarText(config.scale), scaleX + scaleBarWidth + 2, scaleY + 1);
             }
 
             // Add legend if enabled and has active layers
-            if (hasLegend) {
-                console.log('Adding legend to PDF...');
+            if (hasLegend) {                
+                // Bordure de la légende
+                pdf.setDrawColor(0, 0, 0);
+                pdf.setLineWidth(0.5);
+                pdf.rect(legendX, currentY, legendWidth, availableHeight);
+                
                 let legendY = currentY + 5;
                 
                 pdf.setFontSize(9);
                 pdf.setFont(undefined, 'bold');
-                pdf.text('LÉGENDE', legendX, legendY);
-                legendY += 5;
+                pdf.text('LÉGENDE', legendX + 3, legendY);
+                legendY += 6;
                 
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(7);
@@ -408,27 +647,25 @@ const GeoFlowPrint = {
                             if (layer) layerName = layer.name;
                         });
                     }
-                    
-                    console.log('PDF Legend - Layer:', layerId, 'Name:', layerName, 'Has data:', !!legendData);
-                    
+                                        
                     if (legendData && legendData.items && legendY < currentY + availableHeight - 10) {
                         // Layer name
                         pdf.setFont(undefined, 'bold');
-                        const truncatedName = layerName.length > 18 ? layerName.substring(0, 16) + '...' : layerName;
-                        pdf.text(truncatedName, legendX, legendY);
+                        const truncatedName = layerName.length > 20 ? layerName.substring(0, 18) + '...' : layerName;
+                        pdf.text(truncatedName, legendX + 3, legendY);
                         legendY += 4;
                         pdf.setFont(undefined, 'normal');
                         
                         // Legend items
                         legendData.items.forEach(legendItem => {
-                            if (legendY > currentY + availableHeight - 10) return;
+                            if (legendY > currentY + availableHeight - 8) return;
                             
                             const rgb = this.hexToRgb(legendItem.color);
                             pdf.setFillColor(rgb.r, rgb.g, rgb.b);
-                            pdf.rect(legendX, legendY - 2.5, 3, 3, 'F');
+                            pdf.rect(legendX + 3, legendY - 2.5, 3, 3, 'F');
                             
-                            const labelText = legendItem.label.length > 16 ? legendItem.label.substring(0, 14) + '...' : legendItem.label;
-                            pdf.text(labelText, legendX + 4.5, legendY);
+                            const labelText = legendItem.label.length > 18 ? legendItem.label.substring(0, 16) + '...' : legendItem.label;
+                            pdf.text(labelText, legendX + 7.5, legendY);
                             legendY += 4;
                             itemsAdded++;
                         });
@@ -436,38 +673,32 @@ const GeoFlowPrint = {
                         legendY += 2;
                     }
                 });
-                console.log('Legend items added:', itemsAdded);
-            } else {
-                console.log('No legend added - hasLegend:', hasLegend, 'config.legend:', config.legend, 'activeLayerIds:', activeLayerIds.length);
             }
 
             // === FOOTER ===
             pdf.setFontSize(7);
             pdf.setTextColor(107, 114, 128);
-            const footerY = height - marginY - 5;
+            const footerY = height - marginY - 8;
             
-            // Line separator
-            pdf.setDrawColor(229, 231, 235);
-            pdf.setLineWidth(0.3);
-            pdf.line(marginX, footerY - 3, width - marginX, footerY - 3);
+            // Bordure du footer
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.5);
+            pdf.rect(marginX, footerY - 1, availableWidth, 8);
             
             const date = new Date().toLocaleDateString('fr-FR');
             pdf.setFont(undefined, 'bold');
-            pdf.text('GeoFlow', marginX, footerY);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text('GeoFlow', marginX + 3, footerY + 4);
             pdf.setFont(undefined, 'normal');
-            pdf.text(`© ${date}`, marginX + 15, footerY);
-            pdf.text(`Format: ${this.printFormats[config.format].label}`, width / 2 - 15, footerY);
+            pdf.text(`© ${date}`, marginX + 20, footerY + 4);
+            pdf.text(`Format: ${this.printFormats[config.format].label}`, width - marginX - 35, footerY + 4);
             
-            console.log('Footer added');
-
             // Save PDF
             const filename = `geoflow_${config.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
-            console.log('Saving as:', filename);
             pdf.save(filename);
 
             GeoFlowUtils.hideLoading();
             GeoFlowUtils.showToast('PDF généré avec succès !', 'success');
-            console.log('=== PDF GENERATION SUCCESS ===');
 
         } catch (error) {
             GeoFlowUtils.hideLoading();
@@ -498,10 +729,54 @@ const GeoFlowPrint = {
     getConfig() {
         return {
             format: document.getElementById('print-format')?.value || 'a4-landscape',
+            scale: document.getElementById('print-scale')?.value || 'free',
             title: document.getElementById('print-title')?.value || 'Carte GeoFlow',
             legend: document.getElementById('print-legend')?.checked || false,
             scaleBar: document.getElementById('print-scale-bar')?.checked || false,
             northArrow: document.getElementById('print-north-arrow')?.checked || false
         };
+    },
+
+    /**
+     * Calcule le texte de l'échelle graphique en fonction de l'échelle choisie
+     */
+    getScaleBarText(scaleValue) {
+        if (scaleValue === 'free') {
+            return '0____500m';
+        }
+        
+        const scale = parseInt(scaleValue);
+        
+        // Longueur de la barre : ~25mm dans le PDF
+        // À l'échelle 1:X, 25mm représente 25 * X millimètres dans la réalité
+        const realDistanceMm = 25 * scale;
+        const realDistanceM = realDistanceMm / 1000;
+        
+        // Arrondir à une valeur lisible
+        let displayDistance;
+        let unit;
+        
+        if (realDistanceM < 1000) {
+            // Afficher en mètres
+            if (realDistanceM < 10) {
+                displayDistance = Math.round(realDistanceM);
+            } else if (realDistanceM < 100) {
+                displayDistance = Math.round(realDistanceM / 10) * 10;
+            } else {
+                displayDistance = Math.round(realDistanceM / 50) * 50;
+            }
+            unit = 'm';
+        } else {
+            // Afficher en kilomètres
+            const distanceKm = realDistanceM / 1000;
+            if (distanceKm < 10) {
+                displayDistance = Math.round(distanceKm * 2) / 2; // arrondi à 0.5
+            } else {
+                displayDistance = Math.round(distanceKm);
+            }
+            unit = 'km';
+        }
+        
+        return `0____${displayDistance}${unit}`;
     }
 };

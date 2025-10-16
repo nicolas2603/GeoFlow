@@ -1,10 +1,15 @@
 {
   "theme": {
     "name": "default",
-    "title": "Test",
+    "title": "GeoFlow",
     "colors": {
       "primary": "#378ba7",
-      "secondary": "#278368"
+      "secondary": "#278368",
+      "accent": "#f59e0b",
+      "success": "#10b981",
+      "warning": "#f59e0b",
+      "error": "#ef4444",
+      "primaryDark": "#519cb3"
     },
     "logo": "assets/logo.png"
   },
@@ -24,12 +29,39 @@
         "default": true
       },
       "satellite": {
-        "name": "Satellite",
+        "name": "Satellite ESRI",
         "icon": "bi-globe",
         "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        "preview": "assets/satellite.png",
+        "preview": "assets/satellite.jpg",
         "attribution": "© Esri",
         "maxZoom": 19
+      },
+      "ign-orthophoto": {
+        "name": "Satellite IGN",
+        "icon": "bi-camera",
+        "type": "wmts",
+        "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg",
+        "preview": "assets/ortho-ign.jpg",
+        "attribution": "© IGN",
+        "maxZoom": 19
+      },
+      "ign-plan": {
+        "name": "Plan",
+        "icon": "bi-map",
+        "type": "wmts",
+        "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png",
+        "preview": "assets/plan-ign.png",
+        "attribution": "© IGN",
+        "maxZoom": 18
+      },
+      "ign-cadastre": {
+        "name": "Cadastre",
+        "icon": "bi-grid-3x3",
+        "type": "wmts",
+        "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png",
+        "preview": "assets/cadastre.jpg",
+        "attribution": "© IGN",
+        "maxZoom": 20
       },
       "topo": {
         "name": "Topographique",
