@@ -53,8 +53,8 @@ const GeoflowDraw = {
             this.disableActiveDrawing();
 
             // Update legend
-            if (typeof GeoflowLegend !== 'undefined') {
-                GeoflowLegend.updateContent();
+            if (typeof GeoflowLayers !== 'undefined') {
+                GeoflowLayers.updateLegendWidget();
             }
         });
 
@@ -70,8 +70,8 @@ const GeoflowDraw = {
             this.disableActiveDrawing();
 
             // Update legend
-            if (typeof GeoflowLegend !== 'undefined') {
-                GeoflowLegend.updateContent();
+            if (typeof GeoflowLayers !== 'undefined') {
+                GeoflowLayers.updateLegendWidget();
             }
         });
 
@@ -360,9 +360,6 @@ const GeoflowDraw = {
                                 // Create popup for each polygon part
                                 let popupContent = '<div class="feature-popup">';
                                 popupContent += `<h6>Géométrie importée</h6>`;
-                                if (needsReprojection) {
-                                    popupContent += `<div style="font-size:0.7rem;color:#10b981;margin-bottom:4px;">✓ Reprojetée en WGS84</div>`;
-                                }
                                 if (feature.geometry.coordinates.length > 1) {
                                     popupContent += `<div style="font-size:0.7rem;color:#6b7280;margin-bottom:4px;">Partie ${index + 1}/${feature.geometry.coordinates.length}</div>`;
                                 }
@@ -393,9 +390,6 @@ const GeoflowDraw = {
                                 
                                 let popupContent = '<div class="feature-popup">';
                                 popupContent += `<h6>Géométrie importée</h6>`;
-                                if (needsReprojection) {
-                                    popupContent += `<div style="font-size:0.7rem;color:#10b981;margin-bottom:4px;">✓ Reprojetée en WGS84</div>`;
-                                }
                                 if (feature.geometry.coordinates.length > 1) {
                                     popupContent += `<div style="font-size:0.7rem;color:#6b7280;margin-bottom:4px;">Partie ${index + 1}/${feature.geometry.coordinates.length}</div>`;
                                 }
@@ -477,8 +471,8 @@ const GeoflowDraw = {
                 GeoflowUtils.showToast(`${featureCount} géométrie(s) importée(s)`, 'success');
 
                 // Update legend after import
-                if (typeof GeoflowLegend !== 'undefined') {
-                    GeoflowLegend.updateContent();
+                if (typeof GeoflowLayers !== 'undefined') {
+                    GeoflowLayers.updateLegendWidget();
                 }
             } catch (error) {
                 console.error('Error importing GeoJSON:', error);
@@ -537,8 +531,8 @@ const GeoflowDraw = {
             GeoflowUtils.showToast('Géométries effacées', 'success');
 
             // Update legend
-            if (typeof GeoflowLegend !== 'undefined') {
-                GeoflowLegend.updateContent();
+            if (typeof GeoflowLayers !== 'undefined') {
+                GeoflowLayers.updateLegendWidget();
             }
         }
     },
@@ -570,18 +564,20 @@ const GeoflowDraw = {
 
         if (drawCount > 0) {
             items.push({
+                symbol: 'polygon',
                 color: '#2563eb',
-                label: `Dessin utilisateur (${drawCount})`
+                label: `Dessin utilisateur`
             });
         }
 
         if (importCount > 0) {
             items.push({
+                symbol: 'polygon',
                 color: '#10b981',
-                label: `Import utilisateur (${importCount})`
+                label: `Import utilisateur`
             });
         }
 
-        return items.length > 0 ? { items } : null;
+        return items.length > 0 ? { items: items } : null;
     }
 };

@@ -235,8 +235,6 @@ const GeoflowLayers = {
                 GeoflowMap.map.removeLayer(this.overlayLayers['zones']);
             }
         }
-        
-        console.log('Active layers:', Array.from(this.activeLayerIds));
     },
 
     /**
@@ -291,20 +289,28 @@ const GeoflowLayers = {
      */
     updateLegendWidget() {
         const content = document.getElementById('legend-widget-content');
-        const activeLayers = document.querySelectorAll('.layer-item.active');
-        
+
         let html = '';
         let hasContent = false;
-        
-        if (activeLayers.length > 0) {
+
+        // Add active layers legends en utilisant activeLayerIds
+        if (this.activeLayerIds.size > 0) {
             hasContent = true;
-            activeLayers.forEach(item => {
-                const layerId = item.dataset.layer;
-                const layerName = item.querySelector('.layer-name').textContent;
+            
+            this.activeLayerIds.forEach(layerId => {
                 const legendData = GeoflowConfig.legends[layerId];
                 
                 if (!legendData) return;
                 
+                // Get layer name from config
+                let layerName = layerId;
+                if (GeoflowConfig.layersConfig && GeoflowConfig.layersConfig.themes) {
+                    GeoflowConfig.layersConfig.themes.forEach(theme => {
+                        const layer = theme.layers.find(l => l.id === layerId);
+                        if (layer) layerName = layer.name;
+                    });
+                }
+
                 html += `
                     <div class="legend-layer">
                         <div class="legend-layer-name">${layerName}</div>
@@ -320,25 +326,30 @@ const GeoflowLayers = {
         }
         
         if (typeof GeoflowDraw !== 'undefined') {
-            const drawLegend = GeoflowDraw.getLegendData();
-            
-            if (drawLegend && drawLegend.items) {
-                hasContent = true;
-                
-                html += `
-                    <div class="legend-layer">
-                        <div class="legend-layer-name">Annotations</div>
-                        ${drawLegend.items.map(item => `
-                            <div class="legend-item">
-                                <div class="legend-symbol polygon" style="background-color: ${item.color}"></div>
-                                <div class="legend-label">${item.label}</div>
+            if (GeoflowDraw.getLegendData) {
+                const drawLegend = GeoflowDraw.getLegendData();
+
+                if (drawLegend && drawLegend.items) {
+                    if (drawLegend.items.length > 0) {
+                        hasContent = true;
+
+                        html += `
+                            <div class="legend-layer">
+                                <div class="legend-layer-name">Annotations</div>
+                                ${drawLegend.items.map(item => `
+                                    <div class="legend-item">
+                                        <div class="legend-symbol polygon" style="background-color: ${item.color}"></div>
+                                        <div class="legend-label">${item.label}</div>
+                                    </div>
+                                `).join('')}
                             </div>
-                        `).join('')}
-                    </div>
-                `;
+                        `;
+                    }
+                }
             }
         }
-        
+
+        // Update content
         if (hasContent) {
             content.innerHTML = html;
         } else {

@@ -1,6 +1,6 @@
 /**
- * Geoflow Print Module - Version optimisée avec html2canvas uniquement
- * Solution plus fiable et compatible - PRIORITÉ HAUTEUR 100%
+ * Geoflow Print Module
+ * Solution d'impression et d'aperçu
  */
 
 const GeoflowPrint = {
@@ -167,7 +167,7 @@ const GeoflowPrint = {
                 measureGroupHidden = true;
             }
         }
-        
+
         // Sauvegarder et neutraliser les transformations SVG de Leaflet
         const svgElements = document.querySelectorAll('.leaflet-overlay-pane svg, .leaflet-pane svg');
         const savedTransforms = [];
@@ -189,7 +189,7 @@ const GeoflowPrint = {
                 svg.setAttribute('viewBox', `0 0 ${values[2]} ${values[3]}`);
             }
         });
-        
+
         try {
             // Attendre que les modifications soient appliquées + que les tuiles se chargent
             await new Promise(resolve => setTimeout(resolve, 300));
@@ -356,6 +356,24 @@ const GeoflowPrint = {
                         legendHTML += `</div>`;
                     }
                 });
+            }
+            
+            if (config.legend && typeof GeoflowDraw !== 'undefined' && GeoflowDraw.getLegendData) {
+                const drawLegend = GeoflowDraw.getLegendData();
+                
+                if (drawLegend && drawLegend.items && drawLegend.items.length > 0) {
+                    legendHTML += `<div style="margin-bottom:10px;">`;
+                    legendHTML += `<div style="font-weight:600;font-size:0.8rem;margin-bottom:4px;color:#374151;">Annotations</div>`;
+                    drawLegend.items.forEach(item => {
+                        legendHTML += `
+                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                                <div style="width:14px;height:14px;background:${item.color};border-radius:2px;flex-shrink:0;"></div>
+                                <span style="font-size:0.7rem;">${item.label}</span>
+                            </div>
+                        `;
+                    });
+                    legendHTML += `</div>`;
+                }
             }
             
             const logoPath = GeoflowConfig.theme.logo || 'assets/logo.svg';
@@ -647,7 +665,7 @@ const GeoflowPrint = {
                             if (layer) layerName = layer.name;
                         });
                     }
-                                        
+
                     if (legendData && legendData.items && legendY < currentY + availableHeight - 10) {
                         // Layer name
                         pdf.setFont(undefined, 'bold');
@@ -655,7 +673,7 @@ const GeoflowPrint = {
                         pdf.text(truncatedName, legendX + 3, legendY);
                         legendY += 4;
                         pdf.setFont(undefined, 'normal');
-                        
+
                         // Legend items
                         legendData.items.forEach(legendItem => {
                             if (legendY > currentY + availableHeight - 8) return;
@@ -669,10 +687,36 @@ const GeoflowPrint = {
                             legendY += 4;
                             itemsAdded++;
                         });
-                        
+
                         legendY += 2;
                     }
                 });
+
+                if (typeof GeoflowDraw !== 'undefined' && GeoflowDraw.getLegendData) {
+                    const drawLegend = GeoflowDraw.getLegendData();
+                    
+                    if (drawLegend && drawLegend.items && drawLegend.items.length > 0 && legendY < currentY + availableHeight - 10) {
+                        // Section name
+                        pdf.setFont(undefined, 'bold');
+                        pdf.text('Annotations', legendX + 3, legendY);
+                        legendY += 4;
+                        pdf.setFont(undefined, 'normal');
+                        
+                        // Legend items
+                        drawLegend.items.forEach(item => {
+                            if (legendY > currentY + availableHeight - 8) return;
+                            
+                            const rgb = this.hexToRgb(item.color);
+                            pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+                            pdf.rect(legendX + 3, legendY - 2.5, 3, 3, 'F');
+                            
+                            const labelText = item.label.length > 18 ? item.label.substring(0, 16) + '...' : item.label;
+                            pdf.text(labelText, legendX + 7.5, legendY);
+                            legendY += 4;
+                            itemsAdded++;
+                        });
+                    }
+                }
             }
 
             // === FOOTER ===
