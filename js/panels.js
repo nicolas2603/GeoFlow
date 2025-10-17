@@ -32,6 +32,13 @@ const GeoflowPanels = {
             }
         }
 
+        if (GeoflowConfig.isFeatureEnabled('enr')) {
+            const btnEnr = document.getElementById('btn-enr');
+            if (btnEnr) {
+                btnEnr.addEventListener('click', () => this.showPanel('enr'));
+            }
+        }
+
         if (GeoflowConfig.isFeatureEnabled('tools')) {
             const btnTools = document.getElementById('btn-tools');
             if (btnTools) {
@@ -112,6 +119,11 @@ const GeoflowPanels = {
                 title.textContent = 'Mesurer';
                 content.innerHTML = GeoflowMeasure.getPanelContent();
                 GeoflowMeasure.attachListeners();
+                break;
+            case 'enr':
+                title.textContent = 'Applications métier';
+                content.innerHTML = GeoflowEnr.getPanelContent();
+                GeoflowEnr.attachListeners();
                 break;
             case 'tools':
                 title.textContent = 'Outils';

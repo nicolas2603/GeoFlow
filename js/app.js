@@ -111,46 +111,18 @@ const GeoflowApp = {
         // Apply primary color (light mode)
         if (colors.primary) {
             root.style.setProperty('--primary', colors.primary);
-            //console.log(`✅ Primary color set to: ${colors.primary}`);
-        }
-
-        // Apply secondary color (optional)
-        if (colors.secondary) {
-            root.style.setProperty('--secondary', colors.secondary);
-            //console.log(`✅ Secondary color set to: ${colors.secondary}`);
-        }
-
-        // Apply accent color (optional)
-        if (colors.accent) {
-            root.style.setProperty('--accent', colors.accent);
-            //console.log(`✅ Accent color set to: ${colors.accent}`);
-        }
-
-        // Apply success color (optional)
-        if (colors.success) {
-            root.style.setProperty('--success', colors.success);
-        }
-
-        // Apply warning color (optional)
-        if (colors.warning) {
-            root.style.setProperty('--warning', colors.warning);
-        }
-
-        // Apply error color (optional)
-        if (colors.error) {
-            root.style.setProperty('--error', colors.error);
         }
 
         // Apply dark mode primary color if defined
         if (colors.primaryDark) {
             this.applyDarkThemeColor('--primary', colors.primaryDark);
-            //console.log(`✅ Dark primary color set to: ${colors.primaryDark}`);
         }
 
-        // Apply dark mode secondary color if defined
-        if (colors.secondaryDark) {
-            this.applyDarkThemeColor('--secondary', colors.secondaryDark);
+        // Apply primary text-color (light mode)
+        if (colors.primaryText) {
+            root.style.setProperty('--text-primary', colors.primaryText);
         }
+
     },
 
     /**
