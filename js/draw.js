@@ -51,6 +51,11 @@ const GeoflowDraw = {
             
             // Clean up after drawing is complete
             this.disableActiveDrawing();
+
+            // Update legend
+            if (typeof GeoflowLegend !== 'undefined') {
+                GeoflowLegend.updateContent();
+            }
         });
 
         // Listen for edited shapes
@@ -63,6 +68,11 @@ const GeoflowDraw = {
         GeoflowMap.map.on(L.Draw.Event.DELETED, (e) => {
             GeoflowUtils.showToast(`${e.layers.getLayers().length} géométrie(s) supprimée(s)`, 'success');
             this.disableActiveDrawing();
+
+            // Update legend
+            if (typeof GeoflowLegend !== 'undefined') {
+                GeoflowLegend.updateContent();
+            }
         });
 
         // Initialize proj4 definitions if available
@@ -339,7 +349,7 @@ const GeoflowDraw = {
                                         ring.map(coord => [coord[1], coord[0]]) // [lng, lat] → [lat, lng]
                                     ),
                                     {
-                                        color: needsReprojection ? '#10b981' : '#2563eb',
+                                        color: '#10b981',
                                         weight: 3,
                                         fillOpacity: 0.3
                                     }
@@ -374,7 +384,7 @@ const GeoflowDraw = {
                                 const singleLine = L.polyline(
                                     lineCoords.map(coord => [coord[1], coord[0]]),
                                     {
-                                        color: needsReprojection ? '#10b981' : '#2563eb',
+                                        color: '#10b981',
                                         weight: 3
                                     }
                                 );
@@ -436,7 +446,7 @@ const GeoflowDraw = {
                     },
                     style: (feature) => {
                         return {
-                            color: needsReprojection ? '#10b981' : '#2563eb',
+                            color: '#10b981',
                             weight: 3,
                             fillOpacity: 0.3
                         };
@@ -463,9 +473,13 @@ const GeoflowDraw = {
                 } else {
                     featureCount = 1;
                 }
-                
+
                 GeoflowUtils.showToast(`${featureCount} géométrie(s) importée(s)`, 'success');
-                
+
+                // Update legend after import
+                if (typeof GeoflowLegend !== 'undefined') {
+                    GeoflowLegend.updateContent();
+                }
             } catch (error) {
                 console.error('Error importing GeoJSON:', error);
                 GeoflowUtils.showToast('Erreur lors de l\'import du fichier', 'error');
@@ -521,6 +535,53 @@ const GeoflowDraw = {
         if (confirm(`Effacer toutes les géométries (${layers.length}) ?`)) {
             this.drawnItems.clearLayers();
             GeoflowUtils.showToast('Géométries effacées', 'success');
+
+            // Update legend
+            if (typeof GeoflowLegend !== 'undefined') {
+                GeoflowLegend.updateContent();
+            }
         }
+    },
+
+    /**
+     * Get legend data for draw layers
+     * @returns {Object} Legend configuration
+     */
+    getLegendData() {
+        const layers = this.drawnItems.getLayers();
+        
+        if (layers.length === 0) {
+            return null;
+        }
+
+        // Count draw layers (blue) and import layers (green)
+        let drawCount = 0;
+        let importCount = 0;
+
+        layers.forEach(layer => {
+            if (layer.options && layer.options.color === '#10b981') {
+                importCount++;
+            } else {
+                drawCount++;
+            }
+        });
+
+        const items = [];
+
+        if (drawCount > 0) {
+            items.push({
+                color: '#2563eb',
+                label: `Dessin utilisateur (${drawCount})`
+            });
+        }
+
+        if (importCount > 0) {
+            items.push({
+                color: '#10b981',
+                label: `Import utilisateur (${importCount})`
+            });
+        }
+
+        return items.length > 0 ? { items } : null;
     }
 };

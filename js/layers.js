@@ -293,33 +293,57 @@ const GeoflowLayers = {
         const content = document.getElementById('legend-widget-content');
         const activeLayers = document.querySelectorAll('.layer-item.active');
         
-        if (activeLayers.length === 0) {
-            content.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.8rem;">Aucune couche active</div>';
-            return;
+        let html = '';
+        let hasContent = false;
+        
+        if (activeLayers.length > 0) {
+            hasContent = true;
+            activeLayers.forEach(item => {
+                const layerId = item.dataset.layer;
+                const layerName = item.querySelector('.layer-name').textContent;
+                const legendData = GeoflowConfig.legends[layerId];
+                
+                if (!legendData) return;
+                
+                html += `
+                    <div class="legend-layer">
+                        <div class="legend-layer-name">${layerName}</div>
+                        ${legendData.items.map(legendItem => `
+                            <div class="legend-item">
+                                <div class="legend-symbol ${legendItem.symbol}" style="background-color: ${legendItem.color}"></div>
+                                <div class="legend-label">${legendItem.label}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            });
         }
         
-        let html = '';
-        activeLayers.forEach(item => {
-            const layerId = item.dataset.layer;
-            const layerName = item.querySelector('.layer-name').textContent;
-            const legendData = GeoflowConfig.legends[layerId];
+        if (typeof GeoflowDraw !== 'undefined') {
+            const drawLegend = GeoflowDraw.getLegendData();
             
-            if (!legendData) return;
-            
-            html += `
-                <div class="legend-layer">
-                    <div class="legend-layer-name">${layerName}</div>
-                    ${legendData.items.map(legendItem => `
-                        <div class="legend-item">
-                            <div class="legend-symbol ${legendItem.symbol}" style="background-color: ${legendItem.color}"></div>
-                            <div class="legend-label">${legendItem.label}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        });
+            if (drawLegend && drawLegend.items) {
+                hasContent = true;
+                
+                html += `
+                    <div class="legend-layer">
+                        <div class="legend-layer-name">Annotations</div>
+                        ${drawLegend.items.map(item => `
+                            <div class="legend-item">
+                                <div class="legend-symbol polygon" style="background-color: ${item.color}"></div>
+                                <div class="legend-label">${item.label}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
         
-        content.innerHTML = html;
+        if (hasContent) {
+            content.innerHTML = html;
+        } else {
+            content.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.8rem;">Aucune couche active</div>';
+        }
     },
 
     /**
