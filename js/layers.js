@@ -1,9 +1,9 @@
 /**
- * GeoFlow Layers Module
+ * Geoflow Layers Module
  * Handles layer management, display, and interactions
  */
 
-const GeoFlowLayers = {
+const GeoflowLayers = {
     overlayLayers: {},
     markerClusters: null,
     layerOpacities: {},
@@ -14,7 +14,7 @@ const GeoFlowLayers = {
      */
     init() {
         this.markerClusters = L.markerClusterGroup();
-        GeoFlowMap.map.addLayer(this.markerClusters);
+        GeoflowMap.map.addLayer(this.markerClusters);
     },
 
     /**
@@ -24,7 +24,7 @@ const GeoFlowLayers = {
         return `
             <div class="layer-search">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="layer-search-input" placeholder="Rechercher une couche...">
+                <input type="text" id="layer-search-input" placeholder="Filtrer les couches">
             </div>
 
             <div class="layer-theme" data-theme="environnement">
@@ -82,7 +82,7 @@ const GeoFlowLayers = {
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-label">Zoom</div>
-                    <div class="stat-value" id="stat-zoom">${GeoFlowMap.map.getZoom()}</div>
+                    <div class="stat-value" id="stat-zoom">${GeoflowMap.map.getZoom()}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Éléments</div>
@@ -90,11 +90,11 @@ const GeoFlowLayers = {
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Latitude</div>
-                    <div class="stat-value" id="stat-lat">${GeoFlowMap.map.getCenter().lat.toFixed(4)}</div>
+                    <div class="stat-value" id="stat-lat">${GeoflowMap.map.getCenter().lat.toFixed(4)}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Longitude</div>
-                    <div class="stat-value" id="stat-lng">${GeoFlowMap.map.getCenter().lng.toFixed(4)}</div>
+                    <div class="stat-value" id="stat-lng">${GeoflowMap.map.getCenter().lng.toFixed(4)}</div>
                 </div>
             </div>
         `;
@@ -197,7 +197,7 @@ const GeoFlowLayers = {
         // Search filter
         const searchInput = document.getElementById('layer-search-input');
         if (searchInput) {
-            searchInput.addEventListener('input', GeoFlowUtils.debounce((e) => {
+            searchInput.addEventListener('input', GeoflowUtils.debounce((e) => {
                 const query = e.target.value.toLowerCase().trim();
                 
                 document.querySelectorAll('.layer-item').forEach(item => {
@@ -232,7 +232,7 @@ const GeoFlowLayers = {
             if (show) {
                 this.loadDemoZones();
             } else if (this.overlayLayers['zones']) {
-                GeoFlowMap.map.removeLayer(this.overlayLayers['zones']);
+                GeoflowMap.map.removeLayer(this.overlayLayers['zones']);
             }
         }
         
@@ -243,7 +243,7 @@ const GeoFlowLayers = {
      * Load demo points layer
      */
     loadDemoPoints() {
-        const points = GeoFlowConfig.demoData.points;
+        const points = GeoflowConfig.demoData.points;
 
         points.forEach(p => {
             const marker = L.marker([p.lat, p.lng]);
@@ -251,7 +251,7 @@ const GeoFlowLayers = {
             this.markerClusters.addLayer(marker);
         });
 
-        GeoFlowUtils.showToast(`${points.length} points chargés`, 'success');
+        GeoflowUtils.showToast(`${points.length} points chargés`, 'success');
         this.updateStats();
     },
 
@@ -259,7 +259,7 @@ const GeoFlowLayers = {
      * Load demo zones layer
      */
     loadDemoZones() {
-        const zoneData = GeoFlowConfig.demoData.zone;
+        const zoneData = GeoflowConfig.demoData.zone;
         const zone = L.polygon(zoneData.coordinates, { 
             color: zoneData.color, 
             fillOpacity: zoneData.fillOpacity 
@@ -267,8 +267,8 @@ const GeoFlowLayers = {
         
         zone.bindPopup(`<div class="feature-popup"><h6>${zoneData.name}</h6></div>`);
         this.overlayLayers['zones'] = zone;
-        zone.addTo(GeoFlowMap.map);
-        GeoFlowUtils.showToast('Zone chargée', 'success');
+        zone.addTo(GeoflowMap.map);
+        GeoflowUtils.showToast('Zone chargée', 'success');
     },
 
     /**
@@ -302,7 +302,7 @@ const GeoFlowLayers = {
         activeLayers.forEach(item => {
             const layerId = item.dataset.layer;
             const layerName = item.querySelector('.layer-name').textContent;
-            const legendData = GeoFlowConfig.legends[layerId];
+            const legendData = GeoflowConfig.legends[layerId];
             
             if (!legendData) return;
             

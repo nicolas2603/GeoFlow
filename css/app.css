@@ -392,8 +392,9 @@
 
 .basemap-item.active {
     border-color: var(--primary);
-    box-shadow: 0 4px 16px var(--primary);
+    box-shadow: 0 0 16px var(--primary);
     transform: scale(1.05);
+	border-width: 2px;
 }
 
 .basemap-item img {

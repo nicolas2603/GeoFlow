@@ -1,9 +1,9 @@
 /**
- * GeoFlow Utilities Module
+ * Geoflow Utilities Module
  * Common utility functions used across the application
  */
 
-const GeoFlowUtils = {
+const GeoflowUtils = {
     /**
      * Show loading spinner with custom message
      * @param {string} message - The message to display (default: 'Chargement de l'application...')

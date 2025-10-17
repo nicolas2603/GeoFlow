@@ -1,15 +1,15 @@
 /**
- * GeoFlow Main Application
+ * Geoflow Main Application
  * Entry point and initialization
  */
 
-const GeoFlowApp = {
+const GeoflowApp = {
     /**
      * Initialize the application
      */
     async init() {
         // Load saved theme
-        GeoFlowUtils.loadTheme();
+        GeoflowUtils.loadTheme();
 
         // Load config from JSON if available
         await this.loadConfig();
@@ -20,7 +20,7 @@ const GeoFlowApp = {
         // Update loading text with app title
         const loadingText = document.getElementById('loading-text');
         if (loadingText) {
-            loadingText.textContent = `Chargement de l'application ${GeoFlowConfig.app.title}`;
+            loadingText.textContent = `Chargement de l'application ${GeoflowConfig.app.title}`;
         }
 
         // Simulate minimum loading time for better UX
@@ -30,23 +30,23 @@ const GeoFlowApp = {
         this.applyFeatureConfig();
 
         // Initialize all modules
-        GeoFlowMap.init();
-        GeoFlowLayers.init();
+        GeoflowMap.init();
+        GeoflowLayers.init();
         
-        if (GeoFlowConfig.isFeatureEnabled('draw')) {
-            GeoFlowDraw.init();
+        if (GeoflowConfig.isFeatureEnabled('draw')) {
+            GeoflowDraw.init();
         }
 
-        if (GeoFlowConfig.isFeatureEnabled('measure')) {
-            GeoFlowMeasure.init();
+        if (GeoflowConfig.isFeatureEnabled('measure')) {
+            GeoflowMeasure.init();
         }
 
-        if (GeoFlowConfig.isFeatureEnabled('search')) {
-            GeoFlowSearch.init();
+        if (GeoflowConfig.isFeatureEnabled('search')) {
+            GeoflowSearch.init();
         }
 
-        GeoFlowBasemap.init();
-        GeoFlowPanels.init();
+        GeoflowBasemap.init();
+        GeoflowPanels.init();
 
         // Setup action buttons
         this.initActionButtons();
@@ -56,10 +56,10 @@ const GeoFlowApp = {
 
         // Hide loading screen
         setTimeout(() => {
-            GeoFlowUtils.hideLoading();
+            GeoflowUtils.hideLoading();
         }, 300);
 
-        console.log('✅ GeoFlow initialized successfully');
+        console.log('✅ Geoflow initialized successfully');
     },
 
     /**
@@ -73,20 +73,20 @@ const GeoFlowApp = {
                 
                 // Store full config
                 if (config.theme) {
-                    GeoFlowConfig.theme = config.theme;
-                    GeoFlowConfig.app.title = config.theme.title.split(' - ')[0] || 'GeoFlow';
+                    GeoflowConfig.theme = config.theme;
+                    GeoflowConfig.app.title = config.theme.title.split(' - ')[0] || 'Geoflow';
                 }
                 if (config.map) {
-                    GeoFlowConfig.map = { ...GeoFlowConfig.map, ...config.map };
+                    GeoflowConfig.map = { ...GeoflowConfig.map, ...config.map };
                 }
                 if (config.layers) {
-                    GeoFlowConfig.layersConfig = config.layers;
+                    GeoflowConfig.layersConfig = config.layers;
                 }
                 if (config.legends) {
-                    GeoFlowConfig.legends = { ...GeoFlowConfig.legends, ...config.legends };
+                    GeoflowConfig.legends = { ...GeoflowConfig.legends, ...config.legends };
                 }
                 if (config.features) {
-                    GeoFlowConfig.featuresConfig = config.features;
+                    GeoflowConfig.featuresConfig = config.features;
                 }
                 
                 console.log('✅ Configuration loaded from config.json');
@@ -100,13 +100,13 @@ const GeoFlowApp = {
      * Apply theme colors from config.json to CSS variables
      */
     applyThemeColors() {
-        if (!GeoFlowConfig.theme || !GeoFlowConfig.theme.colors) {
+        if (!GeoflowConfig.theme || !GeoflowConfig.theme.colors) {
             console.log('ℹ️ No theme colors defined in config.json, using defaults');
             return;
         }
 
         const root = document.documentElement;
-        const colors = GeoFlowConfig.theme.colors;
+        const colors = GeoflowConfig.theme.colors;
 
         // Apply primary color (light mode)
         if (colors.primary) {
@@ -190,43 +190,43 @@ const GeoFlowApp = {
      */
     applyFeatureConfig() {
         // Hide draw button if disabled
-        if (!GeoFlowConfig.isFeatureEnabled('draw')) {
+        if (!GeoflowConfig.isFeatureEnabled('draw')) {
             const btnDraw = document.getElementById('btn-draw');
             if (btnDraw) btnDraw.style.display = 'none';
         }
 
         // Hide measure button if disabled
-        if (!GeoFlowConfig.isFeatureEnabled('measure')) {
+        if (!GeoflowConfig.isFeatureEnabled('measure')) {
             const btnMeasure = document.getElementById('btn-measure');
             if (btnMeasure) btnMeasure.style.display = 'none';
         }
 
         // Hide geolocation button if disabled
-        if (!GeoFlowConfig.isFeatureEnabled('geolocation')) {
+        if (!GeoflowConfig.isFeatureEnabled('geolocation')) {
             const btnLocate = document.getElementById('btn-locate');
             if (btnLocate) btnLocate.style.display = 'none';
         }
 
         // Hide legend button if disabled
-        if (!GeoFlowConfig.isFeatureEnabled('legend')) {
+        if (!GeoflowConfig.isFeatureEnabled('legend')) {
             const btnLegend = document.getElementById('btn-legend');
             if (btnLegend) btnLegend.style.display = 'none';
         }
 
         // Hide layers button if disabled
-        if (!GeoFlowConfig.isFeatureEnabled('layers')) {
+        if (!GeoflowConfig.isFeatureEnabled('layers')) {
             const btnLayers = document.getElementById('btn-layers');
             if (btnLayers) btnLayers.style.display = 'none';
         }
 
         // Hide tools button if disabled
-        if (!GeoFlowConfig.isFeatureEnabled('tools')) {
+        if (!GeoflowConfig.isFeatureEnabled('tools')) {
             const btnTools = document.getElementById('btn-tools');
             if (btnTools) btnTools.style.display = 'none';
         }
 
         // Hide search bar if disabled
-        if (!GeoFlowConfig.isFeatureEnabled('search')) {
+        if (!GeoflowConfig.isFeatureEnabled('search')) {
             const searchBar = document.querySelector('.search-bar');
             if (searchBar) searchBar.style.display = 'none';
         }
@@ -236,11 +236,11 @@ const GeoFlowApp = {
      * Initialize action buttons
      */
     initActionButtons() {
-        if (GeoFlowConfig.isFeatureEnabled('geolocation')) {
+        if (GeoflowConfig.isFeatureEnabled('geolocation')) {
             const btnLocate = document.getElementById('btn-locate');
             if (btnLocate) {
                 btnLocate.addEventListener('click', () => {
-                    GeoFlowMap.locateUser();
+                    GeoflowMap.locateUser();
                 });
             }
         }
@@ -248,14 +248,14 @@ const GeoFlowApp = {
         const btnFullscreen = document.getElementById('btn-fullscreen');
         if (btnFullscreen) {
             btnFullscreen.addEventListener('click', () => {
-                GeoFlowMap.toggleFullscreen();
+                GeoflowMap.toggleFullscreen();
             });
         }
 
         const btnHome = document.getElementById('btn-home');
         if (btnHome) {
             btnHome.addEventListener('click', () => {
-                GeoFlowMap.resetView();
+                GeoflowMap.resetView();
             });
         }
     },
@@ -267,11 +267,11 @@ const GeoFlowApp = {
         document.addEventListener('keydown', (e) => {
             // ESC - Close panel
             if (e.key === 'Escape') {
-                GeoFlowPanels.closePanel();
+                GeoflowPanels.closePanel();
             }
             
             // Ctrl+F - Focus search
-            if (GeoFlowConfig.isFeatureEnabled('search') && e.ctrlKey && e.key === 'f') {
+            if (GeoflowConfig.isFeatureEnabled('search') && e.ctrlKey && e.key === 'f') {
                 e.preventDefault();
                 const searchInput = document.getElementById('search-input');
                 if (searchInput) searchInput.focus();
@@ -280,7 +280,7 @@ const GeoFlowApp = {
             // Ctrl+H - Home view
             if (e.ctrlKey && e.key === 'h') {
                 e.preventDefault();
-                GeoFlowMap.resetView();
+                GeoflowMap.resetView();
             }
         });
     }
@@ -288,5 +288,5 @@ const GeoFlowApp = {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    GeoFlowApp.init();
+    GeoflowApp.init();
 });

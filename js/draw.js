@@ -1,10 +1,10 @@
 /**
- * GeoFlow Draw Module
+ * Geoflow Draw Module
  * Handles drawing tools and geometry creation
  * With automatic projection support (EPSG:2154 → EPSG:4326)
  */
 
-const GeoFlowDraw = {
+const GeoflowDraw = {
     drawnItems: null,
     drawControl: null,
     activeDrawHandler: null, // Store active drawing handler
@@ -14,7 +14,7 @@ const GeoFlowDraw = {
      */
     init() {
         this.drawnItems = new L.FeatureGroup();
-        GeoFlowMap.map.addLayer(this.drawnItems);
+        GeoflowMap.map.addLayer(this.drawnItems);
 
         this.drawControl = new L.Control.Draw({
             position: 'topright',
@@ -33,35 +33,35 @@ const GeoFlowDraw = {
         });
 
         // Listen for created shapes
-        GeoFlowMap.map.on(L.Draw.Event.CREATED, (e) => {
+        GeoflowMap.map.on(L.Draw.Event.CREATED, (e) => {
             this.drawnItems.addLayer(e.layer);
             const type = e.layerType;
             let info = `Type: ${type}`;
             
             if (type === 'polyline') {
-                const length = GeoFlowUtils.calculateLength(e.layer.getLatLngs());
-                info += `<br>Longueur: ${GeoFlowUtils.formatDistance(length)}`;
+                const length = GeoflowUtils.calculateLength(e.layer.getLatLngs());
+                info += `<br>Longueur: ${GeoflowUtils.formatDistance(length)}`;
             } else if (type === 'polygon' || type === 'rectangle') {
                 const area = L.GeometryUtil.geodesicArea(e.layer.getLatLngs()[0]);
-                info += `<br>Surface: ${GeoFlowUtils.formatArea(area)}`;
+                info += `<br>Surface: ${GeoflowUtils.formatArea(area)}`;
             }
             
             e.layer.bindPopup(info);
-            GeoFlowUtils.showToast('Géométrie ajoutée', 'success');
+            GeoflowUtils.showToast('Géométrie ajoutée', 'success');
             
             // Clean up after drawing is complete
             this.disableActiveDrawing();
         });
 
         // Listen for edited shapes
-        GeoFlowMap.map.on(L.Draw.Event.EDITED, (e) => {
-            GeoFlowUtils.showToast(`${e.layers.getLayers().length} géométrie(s) modifiée(s)`, 'success');
+        GeoflowMap.map.on(L.Draw.Event.EDITED, (e) => {
+            GeoflowUtils.showToast(`${e.layers.getLayers().length} géométrie(s) modifiée(s)`, 'success');
             this.disableActiveDrawing();
         });
 
         // Listen for deleted shapes
-        GeoFlowMap.map.on(L.Draw.Event.DELETED, (e) => {
-            GeoFlowUtils.showToast(`${e.layers.getLayers().length} géométrie(s) supprimée(s)`, 'success');
+        GeoflowMap.map.on(L.Draw.Event.DELETED, (e) => {
+            GeoflowUtils.showToast(`${e.layers.getLayers().length} géométrie(s) supprimée(s)`, 'success');
             this.disableActiveDrawing();
         });
 
@@ -140,8 +140,8 @@ const GeoFlowDraw = {
      */
     attachListeners() {
         // Add draw control to map
-        if (!GeoFlowMap.map.hasLayer(this.drawControl)) {
-            GeoFlowMap.map.addControl(this.drawControl);
+        if (!GeoflowMap.map.hasLayer(this.drawControl)) {
+            GeoflowMap.map.addControl(this.drawControl);
         }
 
         // Drawing tools
@@ -154,7 +154,7 @@ const GeoFlowDraw = {
                 
                 if (type === 'edit') {
                     // Enable edit mode
-                    this.activeDrawHandler = new L.EditToolbar.Edit(GeoFlowMap.map, { 
+                    this.activeDrawHandler = new L.EditToolbar.Edit(GeoflowMap.map, { 
                         featureGroup: this.drawnItems 
                     });
                     this.activeDrawHandler.enable();
@@ -174,7 +174,7 @@ const GeoFlowDraw = {
                 } else {
                     // Enable drawing mode for shapes
                     const drawType = type.charAt(0).toUpperCase() + type.slice(1);
-                    this.activeDrawHandler = new L.Draw[drawType](GeoFlowMap.map, this.drawControl.options.draw[type]);
+                    this.activeDrawHandler = new L.Draw[drawType](GeoflowMap.map, this.drawControl.options.draw[type]);
                     this.activeDrawHandler.enable();
                 }
             });
@@ -318,10 +318,10 @@ const GeoFlowDraw = {
                         // Remove CRS from reprojected GeoJSON
                         delete reprojectedGeojson.crs;
                         
-                        GeoFlowUtils.showToast(`Reprojection ${sourceCRS} → WGS84 effectuée`, 'success');
+                        GeoflowUtils.showToast(`Reprojection ${sourceCRS} → WGS84 effectuée`, 'success');
                     } else {
                         // proj4 not available
-                        GeoFlowUtils.showToast(`Projection ${sourceCRS} détectée. Installez proj4 pour la reprojection automatique.`, 'warning');
+                        GeoflowUtils.showToast(`Projection ${sourceCRS} détectée. Installez proj4 pour la reprojection automatique.`, 'warning');
                         console.error('proj4 not loaded. Cannot reproject automatically.');
                         console.log('Add proj4 to your HTML: <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>');
                         return;
@@ -449,9 +449,9 @@ const GeoFlowDraw = {
                 // Fit bounds to imported features
                 const bounds = this.drawnItems.getBounds();
                 if (bounds.isValid()) {
-                    GeoFlowMap.map.fitBounds(bounds, { padding: [50, 50] });
+                    GeoflowMap.map.fitBounds(bounds, { padding: [50, 50] });
                 } else {
-                    GeoFlowUtils.showToast('Impossible de zoomer sur les géométries', 'warning');
+                    GeoflowUtils.showToast('Impossible de zoomer sur les géométries', 'warning');
                 }
 
                 // Count features
@@ -464,11 +464,11 @@ const GeoFlowDraw = {
                     featureCount = 1;
                 }
                 
-                GeoFlowUtils.showToast(`${featureCount} géométrie(s) importée(s)`, 'success');
+                GeoflowUtils.showToast(`${featureCount} géométrie(s) importée(s)`, 'success');
                 
             } catch (error) {
                 console.error('Error importing GeoJSON:', error);
-                GeoFlowUtils.showToast('Erreur lors de l\'import du fichier', 'error');
+                GeoflowUtils.showToast('Erreur lors de l\'import du fichier', 'error');
             }
         };
         
@@ -483,7 +483,7 @@ const GeoFlowDraw = {
     exportGeoJSON() {
         const layers = this.drawnItems.getLayers();
         if (layers.length === 0) {
-            GeoFlowUtils.showToast('Rien à exporter', 'warning');
+            GeoflowUtils.showToast('Rien à exporter', 'warning');
             return;
         }
 
@@ -504,7 +504,7 @@ const GeoFlowDraw = {
         a.click();
         URL.revokeObjectURL(url);
 
-        GeoFlowUtils.showToast(`${layers.length} géométrie(s) exportée(s)`, 'success');
+        GeoflowUtils.showToast(`${layers.length} géométrie(s) exportée(s)`, 'success');
     },
 
     /**
@@ -514,13 +514,13 @@ const GeoFlowDraw = {
         const layers = this.drawnItems.getLayers();
         
         if (layers.length === 0) {
-            GeoFlowUtils.showToast('Aucune géométrie à effacer', 'info');
+            GeoflowUtils.showToast('Aucune géométrie à effacer', 'info');
             return;
         }
         
         if (confirm(`Effacer toutes les géométries (${layers.length}) ?`)) {
             this.drawnItems.clearLayers();
-            GeoFlowUtils.showToast('Géométries effacées', 'success');
+            GeoflowUtils.showToast('Géométries effacées', 'success');
         }
     }
 };

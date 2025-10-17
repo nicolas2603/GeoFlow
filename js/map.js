@@ -1,9 +1,9 @@
 /**
- * GeoFlow Map Module
+ * Geoflow Map Module
  * Handles map initialization and base layers
  */
 
-const GeoFlowMap = {
+const GeoflowMap = {
     map: null,
     baseLayers: {},
     currentBasemap: null,
@@ -14,7 +14,7 @@ const GeoFlowMap = {
     init() {
         // Create map instance
         this.map = L.map('map', { zoomControl: false })
-            .setView(GeoFlowConfig.map.center, GeoFlowConfig.map.zoom);
+            .setView(GeoflowConfig.map.center, GeoflowConfig.map.zoom);
 
         // Load base layers from config
         this.loadBaseLayers();
@@ -22,7 +22,7 @@ const GeoFlowMap = {
         // Add event listeners
         this.map.on('moveend', () => this.updateStats());
 
-        GeoFlowUtils.showToast('GeoFlow prêt', 'success');
+        GeoflowUtils.showToast('Geoflow prêt', 'success');
         
         return this.map;
     },
@@ -31,7 +31,7 @@ const GeoFlowMap = {
      * Load base layers from configuration
      */
     loadBaseLayers() {
-        const baseLayers = GeoFlowConfig.map.baseLayers;
+        const baseLayers = GeoflowConfig.map.baseLayers;
         let defaultLayer = null;
 
         Object.entries(baseLayers).forEach(([key, config]) => {
@@ -95,8 +95,8 @@ const GeoFlowMap = {
             this.map.addLayer(this.baseLayers[type]);
             this.currentBasemap = type;
             
-            const layerConfig = GeoFlowConfig.map.baseLayers[type];
-            GeoFlowUtils.showToast(`Fond: ${layerConfig.name}`, 'success');
+            const layerConfig = GeoflowConfig.map.baseLayers[type];
+            GeoflowUtils.showToast(`Fond: ${layerConfig.name}`, 'success');
         }
     },
 
@@ -123,8 +123,8 @@ const GeoFlowMap = {
      * Reset to initial view
      */
     resetView() {
-        this.map.setView(GeoFlowConfig.map.center, GeoFlowConfig.map.zoom);
-        GeoFlowUtils.showToast('Vue initiale', 'success');
+        this.map.setView(GeoflowConfig.map.center, GeoflowConfig.map.zoom);
+        GeoflowUtils.showToast('Vue initiale', 'success');
     },
 
     /**
@@ -132,14 +132,14 @@ const GeoFlowMap = {
      */
     locateUser() {
         if (!navigator.geolocation) {
-            GeoFlowUtils.showToast('Géolocalisation non supportée', 'error');
+            GeoflowUtils.showToast('Géolocalisation non supportée', 'error');
             return;
         }
 
-        GeoFlowUtils.showLoading();
+        GeoflowUtils.showLoading();
         navigator.geolocation.getCurrentPosition(
             (pos) => {
-                GeoFlowUtils.hideLoading();
+                GeoflowUtils.hideLoading();
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
                 this.map.setView([lat, lng], 16);
@@ -148,11 +148,11 @@ const GeoFlowMap = {
                     .bindPopup('<div class="feature-popup"><h6>Votre position</h6></div>')
                     .openPopup();
                 
-                GeoFlowUtils.showToast('Position localisée', 'success');
+                GeoflowUtils.showToast('Position localisée', 'success');
             },
             () => {
-                GeoFlowUtils.hideLoading();
-                GeoFlowUtils.showToast('Impossible de localiser', 'error');
+                GeoflowUtils.hideLoading();
+                GeoflowUtils.showToast('Impossible de localiser', 'error');
             }
         );
     },

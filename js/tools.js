@@ -1,15 +1,15 @@
 /**
- * GeoFlow Tools Module
+ * Geoflow Tools Module
  * Handles miscellaneous tools and utilities
  */
 
-const GeoFlowTools = {
+const GeoflowTools = {
     /**
      * Get tools panel content HTML
      */
     getPanelContent() {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const logoPath = GeoFlowConfig.theme.logo || 'assets/logo.png';
+        const logoPath = GeoflowConfig.theme.logo || 'assets/logo.png';
         
         return `
             <div class="tool-grid">
@@ -40,13 +40,13 @@ const GeoFlowTools = {
             </div>
 
             <div style="margin-top: 16px; padding: 12px; background: var(--hover-bg); border-radius: 8px; display: flex; align-items: center; gap: 12px;">
-                <img src="${logoPath}" alt="GeoFlow" style="width: 77px; height: 77px; flex-shrink: 0; object-fit: contain;" onerror="this.style.display='none'">
+                <img src="${logoPath}" alt="Geoflow" style="width: 77px; height: 77px; flex-shrink: 0; object-fit: contain;" onerror="this.style.display='none'">
                 <div style="flex: 1;">
                     <div style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px;">À propos</div>
                     <p style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-                        <strong style="font-size: 0.8rem;">GeoFlow v1.0</strong><br>
-                        Visualiseur WebSIG open source<br>
-                        Leaflet + Bootstrap + PostGIS
+                        <strong style="font-size: 0.8rem;">${GeoflowConfig.app.title} v${GeoflowConfig.app.version}</strong><br>
+                        Application WebSIG<br>
+                        <i class="fa-solid fa-location-dot"></i> Leaflet + Bootstrap + Postgis
                     </p>
                 </div>
             </div>
@@ -72,33 +72,33 @@ const GeoFlowTools = {
     handleToolAction(tool) {
         switch(tool) {
             case 'theme':
-                const newTheme = GeoFlowUtils.toggleTheme();
+                const newTheme = GeoflowUtils.toggleTheme();
                 // Refresh panel content to update icon
-                if (GeoFlowPanels.currentPanel === 'tools') {
+                if (GeoflowPanels.currentPanel === 'tools') {
                     const content = document.getElementById('panel-content');
                     content.innerHTML = this.getPanelContent();
                     this.attachListeners();
                 }
                 break;
             case 'screenshot':
-                GeoFlowUtils.showToast('Utilisez Ctrl+Shift+S pour capturer', 'info');
+                GeoflowUtils.showToast('Utilisez Ctrl+Shift+S pour capturer', 'info');
                 break;
             case 'share':
-                GeoFlowUtils.copyToClipboard(window.location.href);
-                GeoFlowUtils.showToast('Lien copié', 'success');
+                GeoflowUtils.copyToClipboard(window.location.href);
+                GeoflowUtils.showToast('Lien copié', 'success');
                 break;
             case 'print':
-                GeoFlowPanels.showPanel('print');
+                GeoflowPanels.showPanel('print');
                 break;
             case 'export':
-                if (GeoFlowConfig.isFeatureEnabled('draw')) {
-                    GeoFlowDraw.exportGeoJSON();
+                if (GeoflowConfig.isFeatureEnabled('draw')) {
+                    GeoflowDraw.exportGeoJSON();
                 } else {
-                    GeoFlowUtils.showToast('Fonctionnalité de dessin désactivée', 'warning');
+                    GeoflowUtils.showToast('Fonctionnalité de dessin désactivée', 'warning');
                 }
                 break;
             case 'help':
-                GeoFlowUtils.showToast('Documentation : docs.geoflow.io', 'info');
+                GeoflowUtils.showToast('Documentation : docs.geoflow.io', 'info');
                 break;
         }
     }

@@ -1,9 +1,9 @@
 /**
- * GeoFlow Search Module
+ * Geoflow Search Module
  * Handles geocoding and location search
  */
 
-const GeoFlowSearch = {
+const GeoflowSearch = {
     searchTimeout: null,
 
     /**
@@ -43,7 +43,7 @@ const GeoFlowSearch = {
 
         try {
             const response = await fetch(
-                `${GeoFlowConfig.api.nominatim}/search?format=json&q=${encodeURIComponent(query)}&limit=8`
+                `${GeoflowConfig.api.nominatim}/search?format=json&q=${encodeURIComponent(query)}&limit=8`
             );
             const results = await response.json();
 
@@ -79,9 +79,9 @@ const GeoFlowSearch = {
                 const lat = parseFloat(item.dataset.lat);
                 const lon = parseFloat(item.dataset.lon);
                 
-                GeoFlowMap.map.setView([lat, lon], 16);
+                GeoflowMap.map.setView([lat, lon], 16);
                 
-                L.marker([lat, lon]).addTo(GeoFlowMap.map)
+                L.marker([lat, lon]).addTo(GeoflowMap.map)
                     .bindPopup('<div class="feature-popup"><h6>Recherche</h6></div>')
                     .openPopup();
                 

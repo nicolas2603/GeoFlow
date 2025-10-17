@@ -1,13 +1,13 @@
 /**
- * GeoFlow Configuration Module
+ * Geoflow Configuration Module
  * Default configuration and runtime config storage
  * Actual configuration should be loaded from config.json
  */
 
-const GeoFlowConfig = {
+const GeoflowConfig = {
     // App configuration (loaded from config.json)
     app: {
-        title: 'GeoFlow',
+        title: 'Geoflow',
         version: '1.0'
     },
 

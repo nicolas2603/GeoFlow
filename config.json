@@ -1,7 +1,7 @@
 {
   "theme": {
     "name": "default",
-    "title": "GeoFlow",
+    "title": "Geoflow",
     "colors": {
       "primary": "#378ba7",
       "secondary": "#278368",
@@ -32,7 +32,7 @@
         "name": "Satellite ESRI",
         "icon": "bi-globe",
         "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        "preview": "assets/satellite.jpg",
+        "preview": "assets/satellite.png",
         "attribution": "© Esri",
         "maxZoom": 19
       },
@@ -41,7 +41,7 @@
         "icon": "bi-camera",
         "type": "wmts",
         "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg",
-        "preview": "assets/ortho-ign.jpg",
+        "preview": "assets/ortho-ign.png",
         "attribution": "© IGN",
         "maxZoom": 19
       },
@@ -59,12 +59,12 @@
         "icon": "bi-grid-3x3",
         "type": "wmts",
         "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png",
-        "preview": "assets/cadastre.jpg",
+        "preview": "assets/cadastre.png",
         "attribution": "© IGN",
         "maxZoom": 20
       },
       "topo": {
-        "name": "Topographique",
+        "name": "OpenTopo",
         "icon": "bi-mountain",
         "url": "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
         "preview": "assets/topo.png",

@@ -1,9 +1,9 @@
 /**
- * GeoFlow Print Module - Version optimisée avec html2canvas uniquement
+ * Geoflow Print Module - Version optimisée avec html2canvas uniquement
  * Solution plus fiable et compatible - PRIORITÉ HAUTEUR 100%
  */
 
-const GeoFlowPrint = {
+const GeoflowPrint = {
     printFormats: {
         'a4-portrait': { width: 210, height: 297, label: 'A4 Portrait' },
         'a4-landscape': { width: 297, height: 210, label: 'A4 Paysage' },
@@ -45,7 +45,7 @@ const GeoFlowPrint = {
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
                     Titre
                 </label>
-                <input type="text" id="print-title" class="form-control form-control-sm" placeholder="Titre de la carte" value="Ma carte GeoFlow">
+                <input type="text" id="print-title" class="form-control form-control-sm" placeholder="Titre de la carte" value="Ma carte Geoflow">
             </div>
 
             <div style="margin-bottom: 14px;">
@@ -102,7 +102,7 @@ const GeoFlowPrint = {
      * Retourne le zoom original pour restauration
      */
     applyTemporaryScale(scaleValue) {
-        const originalZoom = GeoFlowMap.map.getZoom();
+        const originalZoom = GeoflowMap.map.getZoom();
         
         if (scaleValue === 'free') {
             return originalZoom; // Garder l'emprise actuelle
@@ -112,13 +112,13 @@ const GeoFlowPrint = {
         
         // Calculer le zoom correspondant à l'échelle
         // Formule : zoom ≈ log2(156543.04 / scale * cos(lat))
-        const center = GeoFlowMap.map.getCenter();
+        const center = GeoflowMap.map.getCenter();
         const lat = center.lat * Math.PI / 180;
         const metersPerPixel = scale / 96 * 0.0254; // 96 DPI standard
         const zoom = Math.log2(156543.04 * Math.cos(lat) / metersPerPixel);
         
         const targetZoom = Math.round(zoom);
-        GeoFlowMap.map.setZoom(targetZoom);
+        GeoflowMap.map.setZoom(targetZoom);
         
         return originalZoom;
     },
@@ -161,9 +161,9 @@ const GeoFlowPrint = {
 
         // Hide measure layers during capture
         let measureGroupHidden = false;
-        if (typeof GeoFlowMeasure !== 'undefined' && GeoFlowMeasure.measureGroup) {
-            if (GeoFlowMap.map.hasLayer(GeoFlowMeasure.measureGroup)) {
-                GeoFlowMap.map.removeLayer(GeoFlowMeasure.measureGroup);
+        if (typeof GeoflowMeasure !== 'undefined' && GeoflowMeasure.measureGroup) {
+            if (GeoflowMap.map.hasLayer(GeoflowMeasure.measureGroup)) {
+                GeoflowMap.map.removeLayer(GeoflowMeasure.measureGroup);
                 measureGroupHidden = true;
             }
         }
@@ -216,8 +216,8 @@ const GeoFlowPrint = {
             });
 
             // Restore measure layers
-            if (measureGroupHidden && GeoFlowMeasure.measureGroup) {
-                GeoFlowMap.map.addLayer(GeoFlowMeasure.measureGroup);
+            if (measureGroupHidden && GeoflowMeasure.measureGroup) {
+                GeoflowMap.map.addLayer(GeoflowMeasure.measureGroup);
             }
             
             // Restaurer les éléments UI
@@ -241,8 +241,8 @@ const GeoFlowPrint = {
             });
 
             // Restore measure layers on error
-            if (measureGroupHidden && GeoFlowMeasure.measureGroup) {
-                GeoFlowMap.map.addLayer(GeoFlowMeasure.measureGroup);
+            if (measureGroupHidden && GeoflowMeasure.measureGroup) {
+                GeoflowMap.map.addLayer(GeoflowMeasure.measureGroup);
             }
 
             hiddenElements.forEach(({ el, originalDisplay }) => {
@@ -256,7 +256,7 @@ const GeoFlowPrint = {
         const config = this.getConfig();
         
         // Show loading with custom message
-        GeoFlowUtils.showLoading('Génération de l\'aperçu...');
+        GeoflowUtils.showLoading('Génération de l\'aperçu...');
         
         try {
             // Appliquer temporairement l'échelle
@@ -277,7 +277,7 @@ const GeoFlowPrint = {
             const availableWidth = width - (marginX * 2);
             const availableHeight = height - marginY - headerHeight - marginY - footerHeight;
             
-            const activeLayerIds = Array.from(GeoFlowLayers.activeLayerIds);
+            const activeLayerIds = Array.from(GeoflowLayers.activeLayerIds);
             const hasLegend = config.legend && activeLayerIds.length > 0;
             
             let mapWidth;
@@ -306,7 +306,7 @@ const GeoFlowPrint = {
                        
             mapContainer.style.width = newWidth + 'px';
             mapContainer.style.height = newHeight + 'px';
-            GeoFlowMap.map.invalidateSize();
+            GeoflowMap.map.invalidateSize();
             
             await new Promise(resolve => setTimeout(resolve, 300));
 
@@ -320,23 +320,23 @@ const GeoFlowPrint = {
             // RESTAURER la taille ET le zoom originaux immédiatement
             mapContainer.style.width = originalWidth + 'px';
             mapContainer.style.height = originalHeight + 'px';
-            GeoFlowMap.map.setZoom(originalZoom);
-            GeoFlowMap.map.invalidateSize();
+            GeoflowMap.map.setZoom(originalZoom);
+            GeoflowMap.map.invalidateSize();
                         
             this.previewMapImage = dataUrl;
             
-            GeoFlowUtils.hideLoading();
+            GeoflowUtils.hideLoading();
             
             // Build legend HTML            
             let legendHTML = '';
             
             if (config.legend && activeLayerIds.length > 0) {
                 activeLayerIds.forEach(layerId => {
-                    const legendData = GeoFlowConfig.legends[layerId];
+                    const legendData = GeoflowConfig.legends[layerId];
                     
                     let layerName = layerId;
-                    if (GeoFlowConfig.layersConfig && GeoFlowConfig.layersConfig.themes) {
-                        GeoFlowConfig.layersConfig.themes.forEach(theme => {
+                    if (GeoflowConfig.layersConfig && GeoflowConfig.layersConfig.themes) {
+                        GeoflowConfig.layersConfig.themes.forEach(theme => {
                             const layer = theme.layers.find(l => l.id === layerId);
                             if (layer) layerName = layer.name;
                         });
@@ -358,7 +358,7 @@ const GeoFlowPrint = {
                 });
             }
             
-            const logoPath = GeoFlowConfig.theme.logo || 'assets/logo.svg';
+            const logoPath = GeoflowConfig.theme.logo || 'assets/logo.svg';
             const logoHTML = (logoPath.endsWith('.png') || logoPath.endsWith('.jpg')) 
                 ? `<img src="${logoPath}" style="height:40px;width:auto;object-fit:contain;" onerror="this.style.display='none'">`
                 : '<div style="color:#6b7280;font-size:0.8rem;">Logo</div>';
@@ -404,7 +404,7 @@ const GeoFlowPrint = {
                             
                             <!-- FOOTER -->
                             <div style="margin-top:3px;padding:8px;border:1px solid #000;font-size:0.7rem;color:#000;display:flex;justify-content:space-between;">
-                                <div><strong>GeoFlow</strong> © ${new Date().toLocaleDateString('fr-FR')}</div>
+                                <div><strong>Geoflow</strong> © ${new Date().toLocaleDateString('fr-FR')}</div>
                                 <div>Format: ${this.printFormats[config.format].label}</div>
                             </div>
                         </div>
@@ -431,9 +431,9 @@ const GeoFlowPrint = {
             };
                         
         } catch (error) {
-            GeoFlowUtils.hideLoading();
+            GeoflowUtils.hideLoading();
             console.error('=== PREVIEW ERROR ===', error);
-            GeoFlowUtils.showToast('Erreur lors de la capture: ' + error.message, 'error');
+            GeoflowUtils.showToast('Erreur lors de la capture: ' + error.message, 'error');
         }
     },
 
@@ -451,7 +451,7 @@ const GeoFlowPrint = {
             return;
         }
 
-        GeoFlowUtils.showLoading('Impression de la carte...');
+        GeoflowUtils.showLoading('Impression de la carte...');
 
         try {
             const config = this.getConfig();
@@ -474,7 +474,7 @@ const GeoFlowPrint = {
             const availableWidth = width - (marginX * 2);
             const availableHeight = height - marginY - headerHeight - marginY - footerHeight;
             
-            const activeLayerIds = Array.from(GeoFlowLayers.activeLayerIds);
+            const activeLayerIds = Array.from(GeoflowLayers.activeLayerIds);
             const hasLegend = config.legend && activeLayerIds.length > 0;
             
             let mapWidth, legendWidth;
@@ -507,7 +507,7 @@ const GeoFlowPrint = {
             // Appliquer le redimensionnement temporaire
             mapContainer.style.width = newWidth + 'px';
             mapContainer.style.height = newHeight + 'px';
-            GeoFlowMap.map.invalidateSize();
+            GeoflowMap.map.invalidateSize();
             
             // Attendre que Leaflet ait fini de redessiner
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -522,8 +522,8 @@ const GeoFlowPrint = {
             // RESTAURER la taille ET le zoom originaux immédiatement
             mapContainer.style.width = originalWidth + 'px';
             mapContainer.style.height = originalHeight + 'px';
-            GeoFlowMap.map.setZoom(originalZoom);
-            GeoFlowMap.map.invalidateSize();
+            GeoflowMap.map.setZoom(originalZoom);
+            GeoflowMap.map.invalidateSize();
             
             // Create PDF
             const { jsPDF } = window.jspdf;
@@ -539,7 +539,7 @@ const GeoFlowPrint = {
             let currentY = marginY;
 
             // === HEADER: Title + Logo ===
-            const logoPath = GeoFlowConfig.theme.logo || 'assets/logo.svg';
+            const logoPath = GeoflowConfig.theme.logo || 'assets/logo.svg';
             
             // Bordure du header
             pdf.setDrawColor(0, 0, 0);
@@ -637,12 +637,12 @@ const GeoFlowPrint = {
                 
                 let itemsAdded = 0;
                 activeLayerIds.forEach(layerId => {
-                    const legendData = GeoFlowConfig.legends[layerId];
+                    const legendData = GeoflowConfig.legends[layerId];
                     
                     // Get layer name from config
                     let layerName = layerId;
-                    if (GeoFlowConfig.layersConfig && GeoFlowConfig.layersConfig.themes) {
-                        GeoFlowConfig.layersConfig.themes.forEach(theme => {
+                    if (GeoflowConfig.layersConfig && GeoflowConfig.layersConfig.themes) {
+                        GeoflowConfig.layersConfig.themes.forEach(theme => {
                             const layer = theme.layers.find(l => l.id === layerId);
                             if (layer) layerName = layer.name;
                         });
@@ -688,7 +688,7 @@ const GeoFlowPrint = {
             const date = new Date().toLocaleDateString('fr-FR');
             pdf.setFont(undefined, 'bold');
             pdf.setTextColor(0, 0, 0);
-            pdf.text('GeoFlow', marginX + 3, footerY + 4);
+            pdf.text('Geoflow', marginX + 3, footerY + 4);
             pdf.setFont(undefined, 'normal');
             pdf.text(`© ${date}`, marginX + 20, footerY + 4);
             pdf.text(`Format: ${this.printFormats[config.format].label}`, width - marginX - 35, footerY + 4);
@@ -697,14 +697,14 @@ const GeoFlowPrint = {
             const filename = `geoflow_${config.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
             pdf.save(filename);
 
-            GeoFlowUtils.hideLoading();
-            GeoFlowUtils.showToast('PDF généré avec succès !', 'success');
+            GeoflowUtils.hideLoading();
+            GeoflowUtils.showToast('PDF généré avec succès !', 'success');
 
         } catch (error) {
-            GeoFlowUtils.hideLoading();
+            GeoflowUtils.hideLoading();
             console.error('=== PDF GENERATION ERROR ===', error);
             alert('Erreur: ' + error.message);
-            GeoFlowUtils.showToast('Erreur: ' + error.message, 'error');
+            GeoflowUtils.showToast('Erreur: ' + error.message, 'error');
         }
     },
 
@@ -730,7 +730,7 @@ const GeoFlowPrint = {
         return {
             format: document.getElementById('print-format')?.value || 'a4-landscape',
             scale: document.getElementById('print-scale')?.value || 'free',
-            title: document.getElementById('print-title')?.value || 'Carte GeoFlow',
+            title: document.getElementById('print-title')?.value || 'Carte Geoflow',
             legend: document.getElementById('print-legend')?.checked || false,
             scaleBar: document.getElementById('print-scale-bar')?.checked || false,
             northArrow: document.getElementById('print-north-arrow')?.checked || false

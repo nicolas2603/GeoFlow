@@ -1,9 +1,9 @@
 /**
- * GeoFlow Measure Module
+ * Geoflow Measure Module
  * Handles distance and area measurements
  */
 
-const GeoFlowMeasure = {
+const GeoflowMeasure = {
     measureLayer: null,
     measureGroup: null, // Separate group for measure layers
     activeMeasureHandler: null, // Store active measure handler
@@ -15,7 +15,7 @@ const GeoFlowMeasure = {
     init() {
         // Create a separate feature group for measurements
         this.measureGroup = new L.FeatureGroup();
-        GeoFlowMap.map.addLayer(this.measureGroup);
+        GeoflowMap.map.addLayer(this.measureGroup);
     },
 
     /**
@@ -74,7 +74,7 @@ const GeoFlowMeasure = {
 
         // Remove previous measurement layer
         if (this.measureLayer) {
-            GeoFlowMap.map.removeLayer(this.measureLayer);
+            GeoflowMap.map.removeLayer(this.measureLayer);
             this.measureLayer = null;
         }
 
@@ -93,10 +93,10 @@ const GeoFlowMeasure = {
         };
         
         if (type === 'distance') {
-            this.activeMeasureHandler = new L.Draw.Polyline(GeoFlowMap.map, options);
+            this.activeMeasureHandler = new L.Draw.Polyline(GeoflowMap.map, options);
             this.activeMeasureHandler.enable();
         } else {
-            this.activeMeasureHandler = new L.Draw.Polygon(GeoFlowMap.map, options);
+            this.activeMeasureHandler = new L.Draw.Polygon(GeoflowMap.map, options);
             this.activeMeasureHandler.enable();
         }
 
@@ -114,13 +114,13 @@ const GeoFlowMeasure = {
                 resultDiv.style.display = 'block';
 
                 if (type === 'distance') {
-                    const length = GeoFlowUtils.calculateLength(this.measureLayer.getLatLngs());
-                    valueDiv.textContent = GeoFlowUtils.formatDistance(length);
-                    GeoFlowUtils.showToast(`Distance: ${GeoFlowUtils.formatDistance(length)}`, 'success');
+                    const length = GeoflowUtils.calculateLength(this.measureLayer.getLatLngs());
+                    valueDiv.textContent = GeoflowUtils.formatDistance(length);
+                    GeoflowUtils.showToast(`Distance: ${GeoflowUtils.formatDistance(length)}`, 'success');
                 } else {
                     const area = L.GeometryUtil.geodesicArea(this.measureLayer.getLatLngs()[0]);
-                    valueDiv.textContent = GeoFlowUtils.formatArea(area);
-                    GeoFlowUtils.showToast(`Surface: ${GeoFlowUtils.formatArea(area)}`, 'success');
+                    valueDiv.textContent = GeoflowUtils.formatArea(area);
+                    GeoflowUtils.showToast(`Surface: ${GeoflowUtils.formatArea(area)}`, 'success');
                 }
             }
 
@@ -128,14 +128,14 @@ const GeoFlowMeasure = {
             this.disableActiveMeasure();
             
             // Remove THIS specific handler
-            GeoFlowMap.map.off(L.Draw.Event.CREATED, measureCompleteHandler);
+            GeoflowMap.map.off(L.Draw.Event.CREATED, measureCompleteHandler);
         };
 
         // Store reference to the handler
         this.measureCompleteHandler = measureCompleteHandler;
 
         // Listen for measurement completion
-        GeoFlowMap.map.on(L.Draw.Event.CREATED, measureCompleteHandler);
+        GeoflowMap.map.on(L.Draw.Event.CREATED, measureCompleteHandler);
     },
 
     /**
@@ -157,7 +157,7 @@ const GeoFlowMeasure = {
             resultDiv.style.display = 'none';
         }
 
-        GeoFlowUtils.showToast('Mesure effacée', 'success');
+        GeoflowUtils.showToast('Mesure effacée', 'success');
     },
 
     /**
@@ -177,7 +177,7 @@ const GeoFlowMeasure = {
 
         // Remove ONLY the measure-specific event listener
         if (this.measureCompleteHandler) {
-            GeoFlowMap.map.off(L.Draw.Event.CREATED, this.measureCompleteHandler);
+            GeoflowMap.map.off(L.Draw.Event.CREATED, this.measureCompleteHandler);
             this.measureCompleteHandler = null;
         }
 

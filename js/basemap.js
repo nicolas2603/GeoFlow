@@ -1,9 +1,9 @@
 /**
- * GeoFlow Basemap Module
+ * Geoflow Basemap Module
  * Handles basemap gallery and switching
  */
 
-const GeoFlowBasemap = {
+const GeoflowBasemap = {
     /**
      * Initialize basemap controls
      */
@@ -32,7 +32,7 @@ const GeoFlowBasemap = {
      */
     generateGallery() {
         const gallery = document.getElementById('basemap-gallery');
-        const baseLayers = GeoFlowConfig.map.baseLayers;
+        const baseLayers = GeoflowConfig.map.baseLayers;
         
         let html = '';
         Object.entries(baseLayers).forEach(([key, config]) => {
@@ -129,7 +129,7 @@ const GeoFlowBasemap = {
         item.classList.add('active');
         
         // Switch basemap
-        GeoFlowMap.switchBasemap(type);
+        GeoflowMap.switchBasemap(type);
         
         // Update preview image
         const previewImg = document.getElementById('basemap-preview');

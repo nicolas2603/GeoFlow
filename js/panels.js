@@ -1,9 +1,9 @@
 /**
- * GeoFlow Panels Module
+ * Geoflow Panels Module
  * Handles side panel management and navigation
  */
 
-const GeoFlowPanels = {
+const GeoflowPanels = {
     currentPanel: null,
 
     /**
@@ -11,28 +11,28 @@ const GeoFlowPanels = {
      */
     init() {
         // Panel buttons - only if features are enabled
-        if (GeoFlowConfig.isFeatureEnabled('layers')) {
+        if (GeoflowConfig.isFeatureEnabled('layers')) {
             const btnLayers = document.getElementById('btn-layers');
             if (btnLayers) {
                 btnLayers.addEventListener('click', () => this.showPanel('layers'));
             }
         }
 
-        if (GeoFlowConfig.isFeatureEnabled('draw')) {
+        if (GeoflowConfig.isFeatureEnabled('draw')) {
             const btnDraw = document.getElementById('btn-draw');
             if (btnDraw) {
                 btnDraw.addEventListener('click', () => this.showPanel('draw'));
             }
         }
 
-        if (GeoFlowConfig.isFeatureEnabled('measure')) {
+        if (GeoflowConfig.isFeatureEnabled('measure')) {
             const btnMeasure = document.getElementById('btn-measure');
             if (btnMeasure) {
                 btnMeasure.addEventListener('click', () => this.showPanel('measure'));
             }
         }
 
-        if (GeoFlowConfig.isFeatureEnabled('tools')) {
+        if (GeoflowConfig.isFeatureEnabled('tools')) {
             const btnTools = document.getElementById('btn-tools');
             if (btnTools) {
                 btnTools.addEventListener('click', () => this.showPanel('tools'));
@@ -43,7 +43,7 @@ const GeoFlowPanels = {
         document.getElementById('panel-close').addEventListener('click', () => this.closePanel());
 
         // Legend widget
-        if (GeoFlowConfig.isFeatureEnabled('legend')) {
+        if (GeoflowConfig.isFeatureEnabled('legend')) {
             const btnLegend = document.getElementById('btn-legend');
             const legendClose = document.getElementById('legend-widget-close');
             
@@ -61,9 +61,9 @@ const GeoFlowPanels = {
      * @param {string} type - Panel type (layers, draw, measure, tools)
      */
     showPanel(type) {
-        // Check if feature is enabled using GeoFlowConfig method
-        if (!GeoFlowConfig.isFeatureEnabled(type)) {
-            GeoFlowUtils.showToast('Fonctionnalité désactivée', 'warning');
+        // Check if feature is enabled using GeoflowConfig method
+        if (!GeoflowConfig.isFeatureEnabled(type)) {
+            GeoflowUtils.showToast('Fonctionnalité désactivée', 'warning');
             return;
         }
 
@@ -100,28 +100,28 @@ const GeoFlowPanels = {
         switch(type) {
             case 'layers':
                 title.textContent = 'Couches';
-                content.innerHTML = GeoFlowLayers.getPanelContent();
-                GeoFlowLayers.attachListeners();
+                content.innerHTML = GeoflowLayers.getPanelContent();
+                GeoflowLayers.attachListeners();
                 break;
             case 'draw':
                 title.textContent = 'Dessiner';
-                content.innerHTML = GeoFlowDraw.getPanelContent();
-                GeoFlowDraw.attachListeners();
+                content.innerHTML = GeoflowDraw.getPanelContent();
+                GeoflowDraw.attachListeners();
                 break;
             case 'measure':
                 title.textContent = 'Mesurer';
-                content.innerHTML = GeoFlowMeasure.getPanelContent();
-                GeoFlowMeasure.attachListeners();
+                content.innerHTML = GeoflowMeasure.getPanelContent();
+                GeoflowMeasure.attachListeners();
                 break;
             case 'tools':
                 title.textContent = 'Outils';
-                content.innerHTML = GeoFlowTools.getPanelContent();
-                GeoFlowTools.attachListeners();
+                content.innerHTML = GeoflowTools.getPanelContent();
+                GeoflowTools.attachListeners();
                 break;
             case 'print':
                 title.textContent = 'Imprimer';
-                content.innerHTML = GeoFlowPrint.getPanelContent();
-                GeoFlowPrint.attachListeners();
+                content.innerHTML = GeoflowPrint.getPanelContent();
+                GeoflowPrint.attachListeners();
                 break;
         }
 
@@ -168,25 +168,25 @@ const GeoFlowPanels = {
      * Cleanup draw mode
      */
     cleanupDrawMode() {
-        if (typeof GeoFlowDraw !== 'undefined') {
+        if (typeof GeoflowDraw !== 'undefined') {
             // Call the module's cleanup method if available
-            if (typeof GeoFlowDraw.disableActiveDrawing === 'function') {
-                GeoFlowDraw.disableActiveDrawing();
+            if (typeof GeoflowDraw.disableActiveDrawing === 'function') {
+                GeoflowDraw.disableActiveDrawing();
             }
 
             // Additional cleanup for Leaflet.Draw
-            if (GeoFlowMap.map) {
+            if (GeoflowMap.map) {
                 // Disable any active drawing mode
-                GeoFlowMap.map.off('draw:drawstart');
-                GeoFlowMap.map.off('draw:drawstop');
+                GeoflowMap.map.off('draw:drawstart');
+                GeoflowMap.map.off('draw:drawstop');
                 
                 // Try to disable edit/delete modes
                 try {
-                    if (GeoFlowMap.map._editEnabled) {
-                        GeoFlowMap.map.fire('draw:editstop');
+                    if (GeoflowMap.map._editEnabled) {
+                        GeoflowMap.map.fire('draw:editstop');
                     }
-                    if (GeoFlowMap.map._deleteEnabled) {
-                        GeoFlowMap.map.fire('draw:deletestop');
+                    if (GeoflowMap.map._deleteEnabled) {
+                        GeoflowMap.map.fire('draw:deletestop');
                     }
                 } catch (e) {
                     // Ignore errors
@@ -205,10 +205,10 @@ const GeoFlowPanels = {
      * Cleanup measure mode
      */
     cleanupMeasureMode() {
-        if (typeof GeoFlowMeasure !== 'undefined') {
+        if (typeof GeoflowMeasure !== 'undefined') {
             // Call the module's cleanup method if available
-            if (typeof GeoFlowMeasure.disableActiveMeasure === 'function') {
-                GeoFlowMeasure.disableActiveMeasure();
+            if (typeof GeoflowMeasure.disableActiveMeasure === 'function') {
+                GeoflowMeasure.disableActiveMeasure();
             }
 
             // Reset cursor
@@ -223,8 +223,8 @@ const GeoFlowPanels = {
      * Toggle legend widget
      */
     toggleLegend() {
-        if (!GeoFlowConfig.isFeatureEnabled('legend')) {
-            GeoFlowUtils.showToast('Légende désactivée', 'warning');
+        if (!GeoflowConfig.isFeatureEnabled('legend')) {
+            GeoflowUtils.showToast('Légende désactivée', 'warning');
             return;
         }
 
