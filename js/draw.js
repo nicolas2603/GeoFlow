@@ -53,9 +53,9 @@ const GeoflowDraw = {
             this.disableActiveDrawing();
 
             // Update legend
-            if (typeof GeoflowLayers !== 'undefined') {
-                GeoflowLayers.updateLegendWidget();
-            }
+            if (typeof GeoflowLegend !== 'undefined') {
+				GeoflowLegend.requestUpdate();
+			}
         });
 
         // Listen for edited shapes
@@ -70,9 +70,9 @@ const GeoflowDraw = {
             this.disableActiveDrawing();
 
             // Update legend
-            if (typeof GeoflowLayers !== 'undefined') {
-                GeoflowLayers.updateLegendWidget();
-            }
+			if (typeof GeoflowLegend !== 'undefined') {
+				GeoflowLegend.requestUpdate();
+			}
         });
 
         // Initialize proj4 definitions if available
@@ -471,9 +471,9 @@ const GeoflowDraw = {
                 GeoflowUtils.showToast(`${featureCount} géométrie(s) importée(s)`, 'success');
 
                 // Update legend after import
-                if (typeof GeoflowLayers !== 'undefined') {
-                    GeoflowLayers.updateLegendWidget();
-                }
+				if (typeof GeoflowLegend !== 'undefined') {
+					GeoflowLegend.requestUpdate();
+				}
             } catch (error) {
                 console.error('Error importing GeoJSON:', error);
                 GeoflowUtils.showToast('Erreur lors de l\'import du fichier', 'error');
@@ -531,53 +531,9 @@ const GeoflowDraw = {
             GeoflowUtils.showToast('Géométries effacées', 'success');
 
             // Update legend
-            if (typeof GeoflowLayers !== 'undefined') {
-                GeoflowLayers.updateLegendWidget();
-            }
+			if (typeof GeoflowLegend !== 'undefined') {
+				GeoflowLegend.requestUpdate();
+			}
         }
-    },
-
-    /**
-     * Get legend data for draw layers
-     * @returns {Object} Legend configuration
-     */
-    getLegendData() {
-        const layers = this.drawnItems.getLayers();
-        
-        if (layers.length === 0) {
-            return null;
-        }
-
-        // Count draw layers (blue) and import layers (green)
-        let drawCount = 0;
-        let importCount = 0;
-
-        layers.forEach(layer => {
-            if (layer.options && layer.options.color === '#10b981') {
-                importCount++;
-            } else {
-                drawCount++;
-            }
-        });
-
-        const items = [];
-
-        if (drawCount > 0) {
-            items.push({
-                symbol: 'polygon',
-                color: '#2563eb',
-                label: `Dessin utilisateur`
-            });
-        }
-
-        if (importCount > 0) {
-            items.push({
-                symbol: 'polygon',
-                color: '#10b981',
-                label: `Import utilisateur`
-            });
-        }
-
-        return items.length > 0 ? { items: items } : null;
     }
 };

@@ -1,6 +1,7 @@
 /**
  * Geoflow Print Module
  * Solution d'impression et d'aperçu
+ * Version 2.0 - Utilise le module légende centralisé
  */
 
 const GeoflowPrint = {
@@ -252,6 +253,41 @@ const GeoflowPrint = {
         }
     },
 
+    /**
+     * Generate legend HTML from centralized legend module
+     * @param {Object} config - Print configuration
+     * @returns {string} HTML string for legend
+     */
+    generateLegendHTML(config) {
+        if (!config.legend || typeof GeoflowLegend === 'undefined') {
+            return '';
+        }
+
+        const legendSections = GeoflowLegend.getExportData();
+        
+        if (legendSections.length === 0) {
+            return '';
+        }
+
+        let html = '';
+        
+        legendSections.forEach(section => {
+            html += `<div style="margin-bottom:10px;">`;
+            html += `<div style="font-weight:600;font-size:0.8rem;margin-bottom:4px;color:#374151;">${section.title}</div>`;
+            section.items.forEach(item => {
+                html += `
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                        <div style="width:14px;height:14px;background:${item.color};border-radius:2px;flex-shrink:0;"></div>
+                        <span style="font-size:0.7rem;">${item.label}</span>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        });
+
+        return html;
+    },
+
     async showPreview() {
         const config = this.getConfig();
         
@@ -277,8 +313,10 @@ const GeoflowPrint = {
             const availableWidth = width - (marginX * 2);
             const availableHeight = height - marginY - headerHeight - marginY - footerHeight;
             
-            const activeLayerIds = Array.from(GeoflowLayers.activeLayerIds);
-            const hasLegend = config.legend && activeLayerIds.length > 0;
+            // Check if legend has content using centralized module
+            const hasLegend = config.legend && 
+                              typeof GeoflowLegend !== 'undefined' && 
+                              GeoflowLegend.hasContent();
             
             let mapWidth;
             if (hasLegend) {
@@ -327,56 +365,10 @@ const GeoflowPrint = {
             
             GeoflowUtils.hideLoading();
             
-            // Build legend HTML            
-            let legendHTML = '';
+            // Build legend HTML from centralized module
+            const legendHTML = this.generateLegendHTML(config);
             
-            if (config.legend && activeLayerIds.length > 0) {
-                activeLayerIds.forEach(layerId => {
-                    const legendData = GeoflowConfig.legends[layerId];
-                    
-                    let layerName = layerId;
-                    if (GeoflowConfig.layersConfig && GeoflowConfig.layersConfig.themes) {
-                        GeoflowConfig.layersConfig.themes.forEach(theme => {
-                            const layer = theme.layers.find(l => l.id === layerId);
-                            if (layer) layerName = layer.name;
-                        });
-                    }
-                    
-                    if (legendData && legendData.items) {
-                        legendHTML += `<div style="margin-bottom:10px;">`;
-                        legendHTML += `<div style="font-weight:600;font-size:0.8rem;margin-bottom:4px;color:#374151;">${layerName}</div>`;
-                        legendData.items.forEach(legendItem => {
-                            legendHTML += `
-                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-                                    <div style="width:14px;height:14px;background:${legendItem.color};border-radius:2px;flex-shrink:0;"></div>
-                                    <span style="font-size:0.7rem;">${legendItem.label}</span>
-                                </div>
-                            `;
-                        });
-                        legendHTML += `</div>`;
-                    }
-                });
-            }
-            
-            if (config.legend && typeof GeoflowDraw !== 'undefined' && GeoflowDraw.getLegendData) {
-                const drawLegend = GeoflowDraw.getLegendData();
-                
-                if (drawLegend && drawLegend.items && drawLegend.items.length > 0) {
-                    legendHTML += `<div style="margin-bottom:10px;">`;
-                    legendHTML += `<div style="font-weight:600;font-size:0.8rem;margin-bottom:4px;color:#374151;">Annotations</div>`;
-                    drawLegend.items.forEach(item => {
-                        legendHTML += `
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-                                <div style="width:14px;height:14px;background:${item.color};border-radius:2px;flex-shrink:0;"></div>
-                                <span style="font-size:0.7rem;">${item.label}</span>
-                            </div>
-                        `;
-                    });
-                    legendHTML += `</div>`;
-                }
-            }
-            
-            const logoPath = GeoflowConfig.theme.logo || 'assets/logo.svg';
+            const logoPath = GeoflowConfig.theme.logo || 'assets/logo.png';
             const logoHTML = (logoPath.endsWith('.png') || logoPath.endsWith('.jpg')) 
                 ? `<img src="${logoPath}" style="height:40px;width:auto;object-fit:contain;" onerror="this.style.display='none'">`
                 : '<div style="color:#6b7280;font-size:0.8rem;">Logo</div>';
@@ -412,10 +404,10 @@ const GeoflowPrint = {
                                 </div>
                                 
                                 <!-- Legend -->
-                                ${config.legend ? `
+                                ${config.legend && legendHTML ? `
                                     <div style="width:180px;flex-shrink:0;padding:10px;background:#f9fafb;border:1px solid #000;overflow-y:auto;">
                                         <div style="font-weight:700;font-size:0.85rem;color:#1f2937;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">LÉGENDE</div>
-                                        ${legendHTML || '<div style="font-size:0.75rem;color:#9ca3af;">Aucune couche active</div>'}
+                                        ${legendHTML}
                                     </div>
                                 ` : ''}
                             </div>
@@ -492,8 +484,10 @@ const GeoflowPrint = {
             const availableWidth = width - (marginX * 2);
             const availableHeight = height - marginY - headerHeight - marginY - footerHeight;
             
-            const activeLayerIds = Array.from(GeoflowLayers.activeLayerIds);
-            const hasLegend = config.legend && activeLayerIds.length > 0;
+            // Check if legend has content using centralized module
+            const hasLegend = config.legend && 
+                              typeof GeoflowLegend !== 'undefined' && 
+                              GeoflowLegend.hasContent();
             
             let mapWidth, legendWidth;
             if (hasLegend) {
@@ -636,7 +630,7 @@ const GeoflowPrint = {
                 pdf.text(this.getScaleBarText(config.scale), scaleX + scaleBarWidth + 2, scaleY + 1);
             }
 
-            // Add legend if enabled and has active layers
+            // Add legend if enabled and has content
             if (hasLegend) {                
                 // Bordure de la légende
                 pdf.setDrawColor(0, 0, 0);
@@ -653,70 +647,36 @@ const GeoflowPrint = {
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(7);
                 
+                // Get legend data from centralized module
+                const legendSections = GeoflowLegend.getExportData();
                 let itemsAdded = 0;
-                activeLayerIds.forEach(layerId => {
-                    const legendData = GeoflowConfig.legends[layerId];
+                
+                legendSections.forEach(section => {
+                    if (legendY > currentY + availableHeight - 10) return;
                     
-                    // Get layer name from config
-                    let layerName = layerId;
-                    if (GeoflowConfig.layersConfig && GeoflowConfig.layersConfig.themes) {
-                        GeoflowConfig.layersConfig.themes.forEach(theme => {
-                            const layer = theme.layers.find(l => l.id === layerId);
-                            if (layer) layerName = layer.name;
-                        });
-                    }
+                    // Section name
+                    pdf.setFont(undefined, 'bold');
+                    const truncatedName = section.title.length > 20 ? section.title.substring(0, 18) + '...' : section.title;
+                    pdf.text(truncatedName, legendX + 3, legendY);
+                    legendY += 4;
+                    pdf.setFont(undefined, 'normal');
 
-                    if (legendData && legendData.items && legendY < currentY + availableHeight - 10) {
-                        // Layer name
-                        pdf.setFont(undefined, 'bold');
-                        const truncatedName = layerName.length > 20 ? layerName.substring(0, 18) + '...' : layerName;
-                        pdf.text(truncatedName, legendX + 3, legendY);
-                        legendY += 4;
-                        pdf.setFont(undefined, 'normal');
-
-                        // Legend items
-                        legendData.items.forEach(legendItem => {
-                            if (legendY > currentY + availableHeight - 8) return;
-                            
-                            const rgb = this.hexToRgb(legendItem.color);
-                            pdf.setFillColor(rgb.r, rgb.g, rgb.b);
-                            pdf.rect(legendX + 3, legendY - 2.5, 3, 3, 'F');
-                            
-                            const labelText = legendItem.label.length > 18 ? legendItem.label.substring(0, 16) + '...' : legendItem.label;
-                            pdf.text(labelText, legendX + 7.5, legendY);
-                            legendY += 4;
-                            itemsAdded++;
-                        });
-
-                        legendY += 2;
-                    }
-                });
-
-                if (typeof GeoflowDraw !== 'undefined' && GeoflowDraw.getLegendData) {
-                    const drawLegend = GeoflowDraw.getLegendData();
-                    
-                    if (drawLegend && drawLegend.items && drawLegend.items.length > 0 && legendY < currentY + availableHeight - 10) {
-                        // Section name
-                        pdf.setFont(undefined, 'bold');
-                        pdf.text('Annotations', legendX + 3, legendY);
-                        legendY += 4;
-                        pdf.setFont(undefined, 'normal');
+                    // Legend items
+                    section.items.forEach(item => {
+                        if (legendY > currentY + availableHeight - 8) return;
                         
-                        // Legend items
-                        drawLegend.items.forEach(item => {
-                            if (legendY > currentY + availableHeight - 8) return;
-                            
-                            const rgb = this.hexToRgb(item.color);
-                            pdf.setFillColor(rgb.r, rgb.g, rgb.b);
-                            pdf.rect(legendX + 3, legendY - 2.5, 3, 3, 'F');
-                            
-                            const labelText = item.label.length > 18 ? item.label.substring(0, 16) + '...' : item.label;
-                            pdf.text(labelText, legendX + 7.5, legendY);
-                            legendY += 4;
-                            itemsAdded++;
-                        });
-                    }
-                }
+                        const rgb = this.hexToRgb(item.color);
+                        pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+                        pdf.rect(legendX + 3, legendY - 2.5, 3, 3, 'F');
+                        
+                        const labelText = item.label.length > 18 ? item.label.substring(0, 16) + '...' : item.label;
+                        pdf.text(labelText, legendX + 7.5, legendY);
+                        legendY += 4;
+                        itemsAdded++;
+                    });
+
+                    legendY += 2;
+                });
             }
 
             // === FOOTER ===
@@ -752,6 +712,11 @@ const GeoflowPrint = {
         }
     },
 
+    /**
+     * Convert hex color to RGB object
+     * @param {string} hex - Hex color code
+     * @returns {Object} RGB object with r, g, b properties
+     */
     hexToRgb(hex) {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
@@ -761,6 +726,11 @@ const GeoflowPrint = {
         } : { r: 0, g: 0, b: 0 };
     },
 
+    /**
+     * Load image and return Promise
+     * @param {string} src - Image source URL
+     * @returns {Promise} Promise that resolves with loaded image
+     */
     loadImage(src) {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -770,6 +740,10 @@ const GeoflowPrint = {
         });
     },
 
+    /**
+     * Get print configuration from form inputs
+     * @returns {Object} Configuration object
+     */
     getConfig() {
         return {
             format: document.getElementById('print-format')?.value || 'a4-landscape',
@@ -783,6 +757,8 @@ const GeoflowPrint = {
 
     /**
      * Calcule le texte de l'échelle graphique en fonction de l'échelle choisie
+     * @param {string} scaleValue - Scale value from config
+     * @returns {string} Formatted scale bar text
      */
     getScaleBarText(scaleValue) {
         if (scaleValue === 'free') {

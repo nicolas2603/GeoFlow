@@ -47,6 +47,7 @@ const GeoflowApp = {
 
         GeoflowBasemap.init();
         GeoflowPanels.init();
+		GeoflowLegend.init();
 
         // Setup action buttons
         this.initActionButtons();

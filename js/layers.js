@@ -288,74 +288,10 @@ const GeoflowLayers = {
      * Update legend widget
      */
     updateLegendWidget() {
-        const content = document.getElementById('legend-widget-content');
-
-        let html = '';
-        let hasContent = false;
-
-        // Add active layers legends en utilisant activeLayerIds
-        if (this.activeLayerIds.size > 0) {
-            hasContent = true;
-            
-            this.activeLayerIds.forEach(layerId => {
-                const legendData = GeoflowConfig.legends[layerId];
-                
-                if (!legendData) return;
-                
-                // Get layer name from config
-                let layerName = layerId;
-                if (GeoflowConfig.layersConfig && GeoflowConfig.layersConfig.themes) {
-                    GeoflowConfig.layersConfig.themes.forEach(theme => {
-                        const layer = theme.layers.find(l => l.id === layerId);
-                        if (layer) layerName = layer.name;
-                    });
-                }
-
-                html += `
-                    <div class="legend-layer">
-                        <div class="legend-layer-name">${layerName}</div>
-                        ${legendData.items.map(legendItem => `
-                            <div class="legend-item">
-                                <div class="legend-symbol ${legendItem.symbol}" style="background-color: ${legendItem.color}"></div>
-                                <div class="legend-label">${legendItem.label}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            });
-        }
-        
-        if (typeof GeoflowDraw !== 'undefined') {
-            if (GeoflowDraw.getLegendData) {
-                const drawLegend = GeoflowDraw.getLegendData();
-
-                if (drawLegend && drawLegend.items) {
-                    if (drawLegend.items.length > 0) {
-                        hasContent = true;
-
-                        html += `
-                            <div class="legend-layer">
-                                <div class="legend-layer-name">Annotations</div>
-                                ${drawLegend.items.map(item => `
-                                    <div class="legend-item">
-                                        <div class="legend-symbol polygon" style="background-color: ${item.color}"></div>
-                                        <div class="legend-label">${item.label}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `;
-                    }
-                }
-            }
-        }
-
-        // Update content
-        if (hasContent) {
-            content.innerHTML = html;
-        } else {
-            content.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.8rem;">Aucune couche active</div>';
-        }
-    },
+		if (typeof GeoflowLegend !== 'undefined') {
+			GeoflowLegend.requestUpdate();
+		}
+	},
 
     /**
      * Update feature count statistics

@@ -135,6 +135,11 @@ const GeoflowPanels = {
                 content.innerHTML = GeoflowPrint.getPanelContent();
                 GeoflowPrint.attachListeners();
                 break;
+            case 'calepinage':
+                title.textContent = 'Calepinage';
+                content.innerHTML = GeoflowCalepinage.getPanelContent();
+                GeoflowCalepinage.attachListeners();
+                break;
         }
 
         panel.classList.add('active');
@@ -235,19 +240,8 @@ const GeoflowPanels = {
      * Toggle legend widget
      */
     toggleLegend() {
-        if (!GeoflowConfig.isFeatureEnabled('legend')) {
-            GeoflowUtils.showToast('Légende désactivée', 'warning');
-            return;
-        }
-
-        const widget = document.getElementById('legend-widget');
-        const btn = document.getElementById('btn-legend');
-        
-        if (widget) {
-            widget.classList.toggle('active');
-        }
-        if (btn) {
-            btn.classList.toggle('active');
-        }
+        if (typeof GeoflowLegend !== 'undefined') {
+			GeoflowLegend.toggle();
+		}
     }
 };

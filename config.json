@@ -116,6 +116,36 @@
           }
         ]
       },
+	  {
+        "id": "services",
+        "name": "Services",
+        "icon": "bi-bolt",
+        "layers": [
+          {
+            "id": "postes_electriques_rte",
+            "name": "Postes électriques RTE",
+            "type": "postgis",
+            "source": "CAPARESEAU",
+            "date": "19/10/2025",
+            "table": "services.postes_electriques_rte",
+            "geomColumn": "geom",
+            "srid": 2154,
+            "style": {
+              "color": "#8e44ad",
+              "weight": 2,
+              "fillOpacity": 0.3
+            },
+            "endpoint": {
+              "geojson": "/api/layers/postes_electriques_rte/data",
+              "tiles": "/api/tiles/postes_electriques_rte/{z}/{x}/{y}.pbf"
+            },
+            "threshold": 1000,
+            "queryable": true,
+            "filterable": true,
+            "fields": ["code", "nom"]
+          }
+        ]
+      },
       {
         "id": "transport",
         "name": "Transport",
