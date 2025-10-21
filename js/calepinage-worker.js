@@ -103,7 +103,7 @@ function optimizeLayout(data) {
                     // Update progress every 10 configs
                     if (configIndex % 10 === 0) {
                         const progress = 5 + (configIndex / totalConfigs) * 90;
-                        postProgress(progress, `${configIndex}/${totalConfigs} configs testées (meilleur: ${bestPanels.length})`);
+                        postProgress(progress, `${configIndex}/${totalConfigs} configs testées`);
                     }
                 }
             }

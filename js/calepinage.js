@@ -167,7 +167,7 @@ const GeoflowCalepinage = {
             </div>
 
             <!-- Statistiques -->
-            <div id="calepinage-stats" style="display: none;">
+            <div id="calepinage-stats" style="display: none; margin-top: 14px;">
                 <div style="padding: 12px; background: var(--hover-bg); border-radius: 8px; border-left: 3px solid var(--primary);">
                     <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
                         <i class="fa-solid fa-chart-simple"></i> Résultats
@@ -771,46 +771,6 @@ const GeoflowCalepinage = {
     },
 
     /**
-     * Export statistics to CSV
-     */
-    exportStatsToCSV() {
-        if (this.generatedPanels.length === 0) {
-            GeoflowUtils.showToast('Aucune donnée à exporter', 'warning');
-            return;
-        }
-
-        const config = this.getConfig();
-        
-        // Create CSV header
-        let csv = 'id,type,length_m,width_m,area_m2,center_lng,center_lat,orientation,h_spacing,v_spacing,ilot\n';
-        
-        // Add data rows
-        this.generatedPanels.forEach((panel, index) => {
-            const type = panel.type === 'full' ? 'full table' : 'half table';
-            const length = panel.type === 'full' ? config.panelLength : config.panelLength / 2;
-            const width = config.panelWidth;
-            const area = length * width;
-            const [lng, lat] = panel.center;
-            
-            csv += `${index},"${type}",${length},${width},${area},${lng},${lat},${config.orientation},${config.hSpacing},${config.vSpacing},1\n`;
-        });
-
-        // Download CSV
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `calepinage_stats_${Date.now()}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        GeoflowUtils.showToast('Statistiques exportées', 'success');
-    },
-
-    /**
      * Show progress bar
      */
     showProgress() {
@@ -958,9 +918,6 @@ const GeoflowCalepinage = {
                     return;
                 }
                 
-                console.log('Best configuration:', bestConfig);
-                console.log(`Tested ${totalTested} configurations`);
-                
                 this.updateProgress(100, 'Finalisation...', 'Affichage des résultats');
                 
                 // Small delay to show 100% before hiding
@@ -1071,7 +1028,7 @@ const GeoflowCalepinage = {
                     color: color,
                     weight: 1,
                     fillColor: color,
-                    fillOpacity: 0.3
+                    fillOpacity: 0.8
                 }
             });
 
@@ -1103,25 +1060,252 @@ const GeoflowCalepinage = {
             GeoflowLegend.requestUpdate();
         }
     },
-
-    displayStats(panels, config, polygon) {
-        const fullPanels = panels.filter(p => p.type === 'full');
-        const halfPanels = panels.filter(p => p.type === 'half');
-
-        const fullArea = fullPanels.length * config.panelLength * config.panelWidth;
-        const halfArea = halfPanels.length * (config.panelLength / 2) * config.panelWidth;
-        const totalPanelArea = fullArea + halfArea;
-
-        const zoneArea = turf.area(polygon);
-        const coverageRate = (totalPanelArea / zoneArea) * 100;
-
-        document.getElementById('stat-full').textContent = fullPanels.length;
-        document.getElementById('stat-half').textContent = halfPanels.length;
-        document.getElementById('stat-area').textContent = totalPanelArea.toFixed(0) + ' m²';
-        document.getElementById('stat-coverage').textContent = coverageRate.toFixed(1) + '%';
-
-        document.getElementById('calepinage-stats').style.display = 'block';
+   
+    /**
+     * Calculate exact coverage using tracing algorithm
+     * Port of QGIS plugin coverage_logic.py
+     */
+    calculateExactCoverage(panels, config, originalPolygon) {
+        try {
+            console.log('🎯 Calculating exact coverage with tracing algorithm...');
+            
+            // ENABLE DEBUG MODE - uncomment to see detailed segment visualization
+            //GeoflowCoverageTracing.enableDebug(GeoflowMap.map, this.resultLayer);
+            
+            // Increase max iterations for complex layouts
+            GeoflowCoverageTracing.maxIterations = 50000;
+            
+            // Trace boundary using the exact QGIS algorithm
+            const boundaryPoints = GeoflowCoverageTracing.traceCoverageBoundary(
+                panels, 
+                config.hSpacing, 
+                config.vSpacing, 
+                config.orientation
+            );
+            
+            // Disable debug after tracing
+            //GeoflowCoverageTracing.disableDebug();
+            
+            if (!boundaryPoints || boundaryPoints.length < 4) {
+                console.warn('⚠️ Tracing failed, falling back to concave hull');
+                return this.calculateCoverageWithConcaveHull(panels, config, originalPolygon);
+            }
+            
+            // Create polygon from traced points
+            const boundaryPolygon = turf.polygon([boundaryPoints]);
+            
+            // Calculate areas
+            const hullArea = turf.area(boundaryPolygon);
+            const totalPanelArea = this.calculateTotalPanelArea(panels, config);
+            
+            // Calculate coverage rate
+            const coverageRate = (totalPanelArea / hullArea) * 100;
+            
+            console.log(`✅ Exact coverage: ${coverageRate.toFixed(1)}% (${totalPanelArea.toFixed(0)}m² / ${hullArea.toFixed(0)}m²)`);
+            
+            return {
+                rate: coverageRate,
+                hullArea: hullArea,
+                panelArea: totalPanelArea,
+                hull: boundaryPolygon,
+                method: 'exact_tracing',
+                tracedPoints: boundaryPoints.length
+            };
+            
+        } catch (error) {
+            console.error('❌ Error in exact coverage calculation:', error);
+            console.error(error.stack);
+            return this.calculateCoverageWithConcaveHull(panels, config, originalPolygon);
+        }
     },
+    
+    /**
+     * Calculate coverage with concave hull (fallback method)
+     */
+    calculateCoverageWithConcaveHull(panels, config, originalPolygon) {
+        if (panels.length === 0) return { rate: 0, hullArea: 0, panelArea: 0, hull: null, method: 'none' };
+
+        try {
+            console.log('📐 Calculating coverage with concave hull (fallback)...');
+            
+            // Extract all panel corner points
+            const allPoints = [];
+            panels.forEach(panel => {
+                const coords = panel.geometry.geometry.coordinates[0];
+                coords.forEach(coord => {
+                    allPoints.push(turf.point(coord));
+                });
+            });
+
+            // Create FeatureCollection
+            const pointCollection = turf.featureCollection(allPoints);
+
+            // Calculate concave hull
+            const maxEdgeKm = Math.max(config.panelLength, config.panelWidth) / 500;
+            let hull = turf.concave(pointCollection, { maxEdge: maxEdgeKm, units: 'kilometers' });
+
+            // Fallback to convex hull if concave fails
+            if (!hull) {
+                console.warn('⚠️ Concave hull failed, using convex hull');
+                hull = turf.convex(pointCollection);
+            }
+
+            if (!hull) {
+                console.error('❌ Both concave and convex hull failed');
+                return { rate: 0, hullArea: 0, panelArea: 0, hull: null, method: 'failed' };
+            }
+
+            // Calculate areas
+            const hullArea = turf.area(hull);
+            const totalPanelArea = this.calculateTotalPanelArea(panels, config);
+
+            // Calculate coverage rate
+            const coverageRate = (totalPanelArea / hullArea) * 100;
+
+            console.log(`✅ Concave hull coverage: ${coverageRate.toFixed(1)}%`);
+
+            return {
+                rate: coverageRate,
+                hullArea: hullArea,
+                panelArea: totalPanelArea,
+                hull: hull,
+                method: 'concave_hull'
+            };
+
+        } catch (error) {
+            console.error('❌ Error calculating coverage with concave hull:', error);
+            
+            // Last resort: use basic calculation
+            const totalPanelArea = this.calculateTotalPanelArea(panels, config);
+            const zoneArea = originalPolygon ? turf.area(originalPolygon) : totalPanelArea;
+            const basicRate = (totalPanelArea / zoneArea) * 100;
+            
+            return {
+                rate: basicRate,
+                hullArea: zoneArea,
+                panelArea: totalPanelArea,
+                hull: originalPolygon,
+                method: 'basic'
+            };
+        }
+    },
+    
+    /**
+     * Calculate total panel area
+     */
+    calculateTotalPanelArea(panels, config) {
+        const fullArea = panels.filter(p => p.type === 'full').length * 
+                         config.panelLength * config.panelWidth;
+        const halfArea = panels.filter(p => p.type === 'half').length * 
+                         (config.panelLength / 2) * config.panelWidth;
+        return fullArea + halfArea;
+    },
+    
+    /**
+	 * Display statistics with exact coverage calculation
+	 */
+	displayStats(panels, config, polygon) {
+		const fullPanels = panels.filter(p => p.type === 'full');
+		const halfPanels = panels.filter(p => p.type === 'half');
+
+		// Use exact tracing algorithm (with automatic fallback)
+		const coverageResult = this.calculateExactCoverage(panels, config, polygon);
+		
+		// Method indicators
+		const methodLabels = {
+			'exact_tracing': '✓ Traçage exact',
+			'concave_hull': '⚠ Enveloppe concave',
+			'basic': '⚠ Calcul basique',
+			'failed': '✗ Échec',
+			'none': '-'
+		};
+		
+		const methodLabel = methodLabels[coverageResult.method] || coverageResult.method;
+		
+		// ✨ CALCUL CORRIGÉ DU TAUX DE RECOUVREMENT
+		const surfaceFull = config.panelLength * config.panelWidth;  // m²
+		const surfaceHalf = (config.panelLength / 2) * config.panelWidth;  // m²
+		const countFull = fullPanels.length;
+		const countHalf = halfPanels.length;
+		
+		// Surface totale des panneaux
+		const totalPanelArea = (countFull * surfaceFull) + (countHalf * surfaceHalf);
+		
+		// Surface de l'enveloppe en m² (hullArea est déjà en m²)
+		const hullAreaM2 = coverageResult.hullArea;
+		
+		// Taux de recouvrement (formule QGIS)
+		const tauxRecouvrement = (totalPanelArea * 100) / hullAreaM2;
+		
+		console.log(`📊 Calcul du taux de recouvrement:`);
+		console.log(`   Tables entières: ${countFull} × ${surfaceFull.toFixed(2)}m² = ${(countFull * surfaceFull).toFixed(2)}m²`);
+		console.log(`   Demi-tables: ${countHalf} × ${surfaceHalf.toFixed(2)}m² = ${(countHalf * surfaceHalf).toFixed(2)}m²`);
+		console.log(`   Surface panneaux totale: ${totalPanelArea.toFixed(2)}m²`);
+		console.log(`   Surface enveloppe: ${hullAreaM2.toFixed(2)}m²`);
+		console.log(`   Taux: ${tauxRecouvrement.toFixed(1)}%`);
+		
+		// Display coverage hull on map
+		if (coverageResult.hull && this.resultLayer) {
+			const hullStyle = {
+				color: '#ef4444',  // RED for coverage envelope
+				weight: 2,
+				fillColor: 'transparent',
+				opacity: 0.8
+			};
+			
+			const hullLayer = L.geoJSON(coverageResult.hull, {
+				style: hullStyle
+			});
+			
+			hullLayer.bindPopup(`
+				<div class="feature-popup">
+					<h6><i class="fa-solid fa-vector-square"></i> Enveloppe de recouvrement</h6>
+					<table>
+						<tr>
+							<td>Méthode</td>
+							<td style="font-weight: 600;">${methodLabel}</td>
+						</tr>
+						${coverageResult.tracedPoints ? `
+						<tr>
+							<td>Points tracés</td>
+							<td>${coverageResult.tracedPoints}</td>
+						</tr>
+						` : ''}
+						<tr>
+							<td>Tables entières</td>
+							<td>${countFull}</td>
+						</tr>
+						<tr>
+							<td>Demi-tables</td>
+							<td>${countHalf}</td>
+						</tr>
+						<tr>
+							<td>Surface panneaux</td>
+							<td>${totalPanelArea.toFixed(0)} m²</td>
+						</tr>
+						<tr>
+							<td>Surface enveloppe</td>
+							<td>${hullAreaM2.toFixed(0)} m²</td>
+						</tr>
+						<tr>
+							<td>Taux</td>
+							<td style="font-weight: 600; color: #10b981;">${tauxRecouvrement.toFixed(1)}%</td>
+						</tr>
+					</table>
+				</div>
+			`);
+			
+			this.resultLayer.addLayer(hullLayer);
+		}
+
+		// Update stats display
+		document.getElementById('stat-full').textContent = countFull;
+		document.getElementById('stat-half').textContent = countHalf;
+		document.getElementById('stat-area').textContent = totalPanelArea.toFixed(0) + ' m²';
+		document.getElementById('stat-coverage').textContent = tauxRecouvrement.toFixed(1) + '%';
+
+		document.getElementById('calepinage-stats').style.display = 'block';
+	},
 
     clearResults() {
         if (this.resultLayer) {

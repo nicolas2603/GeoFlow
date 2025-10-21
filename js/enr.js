@@ -14,7 +14,11 @@ const GeoflowEnr = {
                     <i class="fa-solid fa-solar-panel"></i>
                     <div class="tool-card-label">Calepinage</div>
                 </div>
-                <div class="tool-card" data-tool="foncier">
+                <div class="tool-card" data-tool="production">
+                    <i class="fa-solid fa-sun"></i>
+                    <div class="tool-card-label">Production</div>
+                </div>
+				<div class="tool-card" data-tool="foncier">
                     <i class="fa-solid fa-object-ungroup"></i>
                     <div class="tool-card-label">Foncier</div>
                 </div>
@@ -43,9 +47,11 @@ const GeoflowEnr = {
             case 'calepinage':
                 GeoflowPanels.showPanel('calepinage');
                 break;
+            case 'production':
+                GeoflowUtils.showToast('Production', 'info');
+                break;
             case 'foncier':
                 GeoflowUtils.showToast('Foncier', 'info');
-                break;
-        }
+                break;        }
     }
 };
