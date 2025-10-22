@@ -1,5 +1,5 @@
 /**
- * Geoflow Calepinage Web Worker
+ * Geoflow Calepinage Web Worker - VERSION CORRIGÉE
  * Performs heavy optimization in background thread
  */
 
@@ -49,7 +49,9 @@ function optimizeLayout(data) {
         const [minLng, minLat, maxLng, maxLat] = bbox;
 
         // Calculate dimensions
-        const isVertical = config.orientation === 90;
+        const isVertical = Math.abs((config.orientation % 180) - 90) < 1e-6;
+
+        // ÉCHANGE des dimensions selon l'orientation
         const panelW = isVertical ? config.panelWidth : config.panelLength;
         const panelH = isVertical ? config.panelLength : config.panelWidth;
 
@@ -58,11 +60,30 @@ function optimizeLayout(data) {
         const metersPerDegreeLat = 111320;
         const metersPerDegreeLng = 111320 * Math.cos(latCenter * Math.PI / 180);
 
-        // Steps
-        const axialStepLen = (panelW + config.hSpacing) / metersPerDegreeLng;
-        const stepPerp = (panelH + config.vSpacing) / metersPerDegreeLat;
+        // CORRECTION CRITIQUE : Échange des espacements en mode tracker
+        let hSpacingToUse, vSpacingToUse;
+        if (isVertical) {
+            // Mode tracker : échanger les espacements
+            hSpacingToUse = config.vSpacing;  // v_spacing → espacement horizontal (entre colonnes)
+            vSpacingToUse = config.hSpacing;  // h_spacing → espacement vertical (entre lignes)
+        } else {
+            // Mode standard : espacements normaux
+            hSpacingToUse = config.hSpacing;
+            vSpacingToUse = config.vSpacing;
+        }
+
+        // Calcul des pas avec les bons espacements
+        const axialStepLen = (panelW + hSpacingToUse) / metersPerDegreeLng;  // Pas entre colonnes
+        const stepPerp = (panelH + vSpacingToUse) / metersPerDegreeLat;     // Pas entre lignes
         const panelLatSize = panelH / metersPerDegreeLat;
         const panelLngSize = panelW / metersPerDegreeLng;
+
+        console.log(`Mode ${isVertical ? 'TRACKER' : 'STANDARD'}:`, {
+            panelW, panelH,
+            hSpacingToUse, vSpacingToUse,
+            axialStepLen: axialStepLen * metersPerDegreeLng,
+            stepPerp: stepPerp * metersPerDegreeLat
+        });
 
         // Optimization loop
         const anchorModes = ['bottom_left', 'bottom_right', 'top_left', 'top_right'];
@@ -90,7 +111,9 @@ function optimizeLayout(data) {
                         panelLatSize, panelLngSize,
                         rowOffset, colOffset,
                         anchor,
-                        config
+                        config,
+                        hSpacingToUse,  // Passer les espacements corrects
+                        isVertical
                     );
                     
                     if (testPanels.length > bestPanels.length) {
@@ -132,7 +155,7 @@ function optimizeLayout(data) {
  */
 function fillWithOffsets(buffered, minLat, maxLat, minLng, maxLng, 
                         stepPerp, axialStepLen, panelLatSize, panelLngSize,
-                        rowOffset, colOffset, anchor, config) {
+                        rowOffset, colOffset, anchor, config, hSpacingToUse, isVertical) {
     const panels = [];
     
     // Determine starting positions based on anchor
@@ -177,97 +200,121 @@ function fillWithOffsets(buffered, minLat, maxLat, minLng, maxLng,
             break;
     }
     
-    const metersPerDegreeLng = 111320 * Math.cos(startLat * Math.PI / 180);
-    const hSpacingLng = config.hSpacing / metersPerDegreeLng;
+    // CORRECTION : Utiliser latCenter pour le calcul, pas startLat
+    const latCenter = (minLat + maxLat) / 2;
+    const metersPerDegreeLng = 111320 * Math.cos(latCenter * Math.PI / 180);
+    const hSpacingLng = hSpacingToUse / metersPerDegreeLng;
     const halfPanelLngSize = panelLngSize / 2;
     
     // Fill row by row
-    for (let lat = startLat; 
-         latDirection > 0 ? (lat + panelLatSize <= endLat) : (lat >= endLat); 
-         lat += latDirection * stepPerp) {
-        
-        const centerLat = lat + panelLatSize / 2;
-        
-        // Fine scan for first panel
-        const scanStep = axialStepLen / 50;
-        let nextPanelLng = null;
-        let firstPanelPlaced = false;
-        
-        for (let lng = searchStartLng;
-             lngDirection > 0 ? (lng + panelLngSize <= searchEndLng) : (lng >= searchEndLng);
-             lng += lngDirection * scanStep) {
+    // LOGIQUE DIFFÉRENTE selon le mode :
+    // - Mode STANDARD : scan fin pour trouver le premier panneau, puis pas fixes
+    // - Mode TRACKER : grille fixe pour aligner les colonnes verticalement
+    
+    if (isVertical) {
+        // MODE TRACKER : Grille fixe pour alignement vertical des colonnes
+        for (let lat = startLat; 
+             latDirection > 0 ? (lat + panelLatSize <= endLat) : (lat >= endLat); 
+             lat += latDirection * stepPerp) {
             
-            const centerLng = lng + panelLngSize / 2;
-            const rect = createRotatedRectangle([centerLng, centerLat], panelLngSize, panelLatSize, config.orientation);
+            const centerLat = lat + panelLatSize / 2;
             
-            if (isPanelFullyContained(rect, buffered)) {
-                panels.push({
-                    geometry: rect,
-                    type: 'full',
-                    center: [centerLng, centerLat]
-                });
-                firstPanelPlaced = true;
-                nextPanelLng = lng + lngDirection * (panelLngSize + hSpacingLng);
-                break;
+            // Parcourir la grille fixe de colonnes
+            for (let lng = searchStartLng;
+                 lngDirection > 0 ? (lng + panelLngSize <= searchEndLng) : (lng >= searchEndLng);
+                 lng += lngDirection * axialStepLen) {
+                
+                let placed = false;
+                
+                // Try full panel at this grid position
+                const centerLng = lng + panelLngSize / 2;
+                const rect = createRotatedRectangle(
+                    [centerLng, centerLat], 
+                    panelLngSize,
+                    panelLatSize,
+                    isVertical
+                );
+                
+                if (isPanelFullyContained(rect, buffered)) {
+                    panels.push({
+                        geometry: rect,
+                        type: 'full',
+                        center: [centerLng, centerLat]
+                    });
+                    placed = true;
+                }
+                
+                // Try half panel if full didn't fit
+                if (!placed && config.allowHalf) {
+                    const centerLngHalf = lng + halfPanelLngSize / 2;
+                    const halfRect = createRotatedRectangle(
+                        [centerLngHalf, centerLat], 
+                        halfPanelLngSize,
+                        panelLatSize,
+                        isVertical
+                    );
+                    
+                    if (isPanelFullyContained(halfRect, buffered)) {
+                        panels.push({
+                            geometry: halfRect,
+                            type: 'half',
+                            center: [centerLngHalf, centerLat]
+                        });
+                        placed = true;
+                    }
+                }
             }
         }
-        
-        // Try half panel if no full panel fits
-        if (!firstPanelPlaced && config.allowHalf) {
+    } else {
+        // MODE STANDARD : Scan fin pour le premier panneau, puis continuation avec pas fixes
+        for (let lat = startLat; 
+             latDirection > 0 ? (lat + panelLatSize <= endLat) : (lat >= endLat); 
+             lat += latDirection * stepPerp) {
+            
+            const centerLat = lat + panelLatSize / 2;
+            
+            // Fine scan for first panel
+            const scanStep = axialStepLen / 50;
+            let nextPanelLng = null;
+            let firstPanelPlaced = false;
+            
             for (let lng = searchStartLng;
-                 lngDirection > 0 ? (lng + halfPanelLngSize <= searchEndLng) : (lng >= searchEndLng);
+                 lngDirection > 0 ? (lng + panelLngSize <= searchEndLng) : (lng >= searchEndLng);
                  lng += lngDirection * scanStep) {
                 
-                const centerLng = lng + halfPanelLngSize / 2;
-                const halfRect = createRotatedRectangle([centerLng, centerLat], halfPanelLngSize, panelLatSize, config.orientation);
+                const centerLng = lng + panelLngSize / 2;
+                const rect = createRotatedRectangle(
+                    [centerLng, centerLat], 
+                    panelLngSize,
+                    panelLatSize,
+                    isVertical
+                );
                 
-                if (isPanelFullyContained(halfRect, buffered)) {
+                if (isPanelFullyContained(rect, buffered)) {
                     panels.push({
-                        geometry: halfRect,
-                        type: 'half',
+                        geometry: rect,
+                        type: 'full',
                         center: [centerLng, centerLat]
                     });
                     firstPanelPlaced = true;
-                    nextPanelLng = lng + lngDirection * (halfPanelLngSize + hSpacingLng);
+                    nextPanelLng = lng + lngDirection * (panelLngSize + hSpacingLng);
                     break;
                 }
             }
-        }
-        
-        // Continue filling row
-        if (nextPanelLng !== null) {
-            let lng = nextPanelLng;
             
-            while ((lngDirection > 0 && lng + halfPanelLngSize <= searchEndLng) || 
-                   (lngDirection < 0 && lng >= searchEndLng)) {
-                let placed = false;
-                
-                // Try full panel
-                if ((lngDirection > 0 && lng + panelLngSize <= searchEndLng) || 
-                    (lngDirection < 0 && lng >= searchEndLng + panelLngSize)) {
-                    
-                    const centerLng = lng + panelLngSize / 2;
-                    const rect = createRotatedRectangle([centerLng, centerLat], panelLngSize, panelLatSize, config.orientation);
-                    
-                    if (isPanelFullyContained(rect, buffered)) {
-                        panels.push({
-                            geometry: rect,
-                            type: 'full',
-                            center: [centerLng, centerLat]
-                        });
-                        lng += lngDirection * (panelLngSize + hSpacingLng);
-                        placed = true;
-                        continue;
-                    }
-                }
-                
-                // Try half panel
-                if (!placed && config.allowHalf &&
-                    ((lngDirection > 0 && lng + halfPanelLngSize <= searchEndLng) || 
-                     (lngDirection < 0 && lng >= searchEndLng + halfPanelLngSize))) {
+            // Try half panel if no full panel fits
+            if (!firstPanelPlaced && config.allowHalf) {
+                for (let lng = searchStartLng;
+                     lngDirection > 0 ? (lng + halfPanelLngSize <= searchEndLng) : (lng >= searchEndLng);
+                     lng += lngDirection * scanStep) {
                     
                     const centerLng = lng + halfPanelLngSize / 2;
-                    const halfRect = createRotatedRectangle([centerLng, centerLat], halfPanelLngSize, panelLatSize, config.orientation);
+                    const halfRect = createRotatedRectangle(
+                        [centerLng, centerLat], 
+                        halfPanelLngSize, 
+                        panelLatSize, 
+                        isVertical
+                    );
                     
                     if (isPanelFullyContained(halfRect, buffered)) {
                         panels.push({
@@ -275,13 +322,72 @@ function fillWithOffsets(buffered, minLat, maxLat, minLng, maxLng,
                             type: 'half',
                             center: [centerLng, centerLat]
                         });
-                        lng += lngDirection * (halfPanelLngSize + hSpacingLng);
-                        placed = true;
-                        continue;
+                        firstPanelPlaced = true;
+                        nextPanelLng = lng + lngDirection * (halfPanelLngSize + hSpacingLng);
+                        break;
                     }
                 }
+            }
+            
+            // Continue filling row with fixed steps
+            if (nextPanelLng !== null) {
+                let lng = nextPanelLng;
                 
-                if (!placed) break;
+                while ((lngDirection > 0 && lng + halfPanelLngSize <= searchEndLng) || 
+                       (lngDirection < 0 && lng >= searchEndLng)) {
+                    let placed = false;
+                    
+                    // Try full panel
+                    if ((lngDirection > 0 && lng + panelLngSize <= searchEndLng) || 
+                        (lngDirection < 0 && lng >= searchEndLng + panelLngSize)) {
+                        
+                        const centerLng = lng + panelLngSize / 2;
+                        const rect = createRotatedRectangle(
+                            [centerLng, centerLat], 
+                            panelLngSize, 
+                            panelLatSize, 
+                            isVertical
+                        );
+                        
+                        if (isPanelFullyContained(rect, buffered)) {
+                            panels.push({
+                                geometry: rect,
+                                type: 'full',
+                                center: [centerLng, centerLat]
+                            });
+                            lng += lngDirection * (panelLngSize + hSpacingLng);
+                            placed = true;
+                            continue;
+                        }
+                    }
+                    
+                    // Try half panel
+                    if (!placed && config.allowHalf &&
+                        ((lngDirection > 0 && lng + halfPanelLngSize <= searchEndLng) || 
+                         (lngDirection < 0 && lng >= searchEndLng + halfPanelLngSize))) {
+                        
+                        const centerLng = lng + halfPanelLngSize / 2;
+                        const halfRect = createRotatedRectangle(
+                            [centerLng, centerLat], 
+                            halfPanelLngSize, 
+                            panelLatSize, 
+                            isVertical
+                        );
+                        
+                        if (isPanelFullyContained(halfRect, buffered)) {
+                            panels.push({
+                                geometry: halfRect,
+                                type: 'half',
+                                center: [centerLng, centerLat]
+                            });
+                            lng += lngDirection * (halfPanelLngSize + hSpacingLng);
+                            placed = true;
+                            continue;
+                        }
+                    }
+                    
+                    if (!placed) break;
+                }
             }
         }
     }
@@ -291,29 +397,37 @@ function fillWithOffsets(buffered, minLat, maxLat, minLng, maxLng,
 
 /**
  * Create rotated rectangle
+ * CORRECTION MAJEURE : Pas de rotation géométrique, juste réorganisation conceptuelle
  */
-function createRotatedRectangle(center, width, height, angle) {
+function createRotatedRectangle(center, width, height, isVertical) {
     const [cx, cy] = center;
     const dx = width / 2;
     const dy = height / 2;
-
+    
+    // Créer le rectangle de base (non rotationné géométriquement)
     let points = [
-        [-dx, -dy], [-dx, +dy], [+dx, +dy], [+dx, -dy], [-dx, -dy]
+        [-dx, -dy],  // Coin 0: bas-gauche
+        [-dx, +dy],  // Coin 1: haut-gauche  
+        [+dx, +dy],  // Coin 2: haut-droit
+        [+dx, -dy],  // Coin 3: bas-droit
+        [-dx, -dy]   // Fermeture
     ];
-
-    if (angle !== 0) {
-        const rad = angle * Math.PI / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-
-        points = points.map(([x, y]) => [
-            cx + (cos * x - sin * y),
-            cy + (sin * x + cos * y)
-        ]);
-    } else {
-        points = points.map(([x, y]) => [cx + x, cy + y]);
+    
+    // CORRECTION CRITIQUE : En mode tracker, réorganiser les coins comme dans QGIS
+    // coords = [coords[1], coords[2], coords[3], coords[0]]
+    if (isVertical) {
+        points = [
+            points[1],  // Nouveau coin 0 = ancien coin 1 (haut-gauche)
+            points[2],  // Nouveau coin 1 = ancien coin 2 (haut-droit)
+            points[3],  // Nouveau coin 2 = ancien coin 3 (bas-droit)
+            points[0],  // Nouveau coin 3 = ancien coin 0 (bas-gauche)
+            points[1]   // Fermeture
+        ];
     }
-
+    
+    // Translater vers le centre
+    points = points.map(([x, y]) => [cx + x, cy + y]);
+    
     return turf.polygon([points]);
 }
 

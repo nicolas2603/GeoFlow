@@ -1,5 +1,5 @@
 /**
- * Geoflow Calepinage Module - Version avec optimisation complète
+ * Geoflow Calepinage Module - Version optimisée avec Web Worker uniquement
  * Generates solar panel layouts within polygons
  * Matches QGIS plugin logic: 4 anchors × 10 row offsets × 10 col offsets = 400 configs
  */
@@ -35,7 +35,8 @@ const GeoflowCalepinage = {
         vSpacing: 3.0,
         edgeMargin: 1.0,
         orientation: 0,
-        allowHalf: false
+        allowHalf: false,
+        calculateCoverage: false
     },
 
     // Stockage des résultats
@@ -47,17 +48,7 @@ const GeoflowCalepinage = {
      */
     getPanelContent() {
         return `
-            <!-- Aide -->
-            <div style="margin-bottom: 14px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border-left: 3px solid #3b82f6;">
-                <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4;">
-                    <strong style="color: var(--text-primary);">Mode d'emploi :</strong><br>
-                    1. Dessinez un polygone sur la carte<br>
-                    2. Configurez les paramètres<br>
-                    3. Cliquez sur "Générer"
-                </div>
-            </div>
-			
-			<!-- Sélection du modèle -->
+            <!-- Sélection du modèle -->
             <div style="margin-bottom: 14px;">
                 <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
                     Modèle de panneau
@@ -124,13 +115,19 @@ const GeoflowCalepinage = {
                 <div class="form-check" style="padding-left: 1.5rem; margin-bottom: 6px;">
                     <input class="form-check-input" type="checkbox" id="calepinage-tracker">
                     <label class="form-check-label" for="calepinage-tracker" style="font-size: 0.85rem;">
-                        <i class="fa-solid fa-rotate"></i> Mode Tracker (vertical)
+                        <i class="fa-solid fa-rotate"></i> Orientation Nord-Sud (mode Tracker)
                     </label>
                 </div>
-                <div class="form-check" style="padding-left: 1.5rem;">
+                <div class="form-check" style="padding-left: 1.5rem; margin-bottom: 6px;">
                     <input class="form-check-input" type="checkbox" id="calepinage-half">
                     <label class="form-check-label" for="calepinage-half" style="font-size: 0.85rem;">
                         <i class="fa-solid fa-scissors"></i> Autoriser les demi-tables
+                    </label>
+                </div>
+                <div class="form-check" style="padding-left: 1.5rem;">
+                    <input class="form-check-input" type="checkbox" id="calepinage-recouvrement">
+                    <label class="form-check-label" for="calepinage-recouvrement" style="font-size: 0.85rem;">
+                        <i class="fa-solid fa-calculator"></i> Calculer le recouvrement
                     </label>
                 </div>
             </div>
@@ -273,7 +270,8 @@ const GeoflowCalepinage = {
             vSpacing: parseFloat(document.getElementById('calepinage-v-spacing')?.value || 3.0),
             edgeMargin: parseFloat(document.getElementById('calepinage-margin')?.value || 1.0),
             orientation: document.getElementById('calepinage-tracker')?.checked ? 90 : 0,
-            allowHalf: document.getElementById('calepinage-half')?.checked || false
+            allowHalf: document.getElementById('calepinage-half')?.checked || false,
+            calculateCoverage: document.getElementById('calepinage-recouvrement')?.checked || false
         };
     },
 
@@ -297,421 +295,6 @@ const GeoflowCalepinage = {
         }
 
         return errors;
-    },
-
-    /**
-     * Create rotated rectangle with proper coordinate system
-     */
-    createRotatedRectangle(center, width, height, angle) {
-        const [cx, cy] = center;
-        const dx = width / 2;
-        const dy = height / 2;
-
-        let points = [
-            [-dx, -dy], [-dx, +dy], [+dx, +dy], [+dx, -dy], [-dx, -dy]
-        ];
-
-        if (angle !== 0) {
-            const rad = angle * Math.PI / 180;
-            const cos = Math.cos(rad);
-            const sin = Math.sin(rad);
-
-            points = points.map(([x, y]) => [
-                cx + (cos * x - sin * y),
-                cy + (sin * x + cos * y)
-            ]);
-        } else {
-            points = points.map(([x, y]) => [cx + x, cy + y]);
-        }
-
-        return turf.polygon([points]);
-    },
-
-    /**
-     * STRICT containment test
-     */
-    isPanelFullyContained(panelRect, bufferedPolygon) {
-        try {
-            const contained = turf.booleanContains(bufferedPolygon, panelRect);
-            
-            if (!contained) {
-                return false;
-            }
-            
-            try {
-                const intersection = turf.intersect(panelRect, bufferedPolygon);
-                if (!intersection) {
-                    return false;
-                }
-                
-                const panelArea = turf.area(panelRect);
-                const intersectionArea = turf.area(intersection);
-                const ratio = intersectionArea / panelArea;
-                
-                return ratio > 0.99;
-            } catch (e) {
-                return contained;
-            }
-            
-        } catch (e) {
-            console.warn('Containment test failed:', e);
-            return false;
-        }
-    },
-
-    /**
-     * OPTIMIZED FILL - matching QGIS plugin logic exactly
-     * Tests 4 anchor modes × 10 row offsets × 10 col offsets = 400 configurations
-     */
-    fillPolygonOptimized(polygon, config) {
-        const panels = [];
-        
-        try {
-            // 1. Apply edge margin buffer
-            let buffered = turf.buffer(polygon, -config.edgeMargin / 1000, {units: 'kilometers'});
-            
-            if (!buffered) {
-                console.warn('Buffer resulted in empty geometry');
-                return panels;
-            }
-
-            // Handle GeometryCollection
-            if (buffered.geometry.type === 'GeometryCollection') {
-                const polys = buffered.geometry.geometries.filter(g => g.type === 'Polygon');
-                if (polys.length === 0) return panels;
-                buffered = turf.polygon(polys[0].coordinates);
-            }
-
-            // 2. Get bounding box
-            const bbox = turf.bbox(buffered);
-            const [minLng, minLat, maxLng, maxLat] = bbox;
-
-            // 3. Calculate panel dimensions based on orientation
-            const isVertical = config.orientation === 90;
-            const panelW = isVertical ? config.panelWidth : config.panelLength;
-            const panelH = isVertical ? config.panelLength : config.panelWidth;
-
-            // 4. Conversion factors (degrees to meters)
-            const latCenter = (minLat + maxLat) / 2;
-            const metersPerDegreeLat = 111320;
-            const metersPerDegreeLng = 111320 * Math.cos(latCenter * Math.PI / 180);
-
-            // 5. Calculate steps
-            const axialStepLen = (panelW + config.hSpacing) / metersPerDegreeLng;  // Step along rows
-            const stepPerp = (panelH + config.vSpacing) / metersPerDegreeLat;      // Step between rows
-            const panelLatSize = panelH / metersPerDegreeLat;
-            const panelLngSize = panelW / metersPerDegreeLng;
-
-            console.log('Optimization config:', {
-                panelW: panelW.toFixed(2) + 'm',
-                panelH: panelH.toFixed(2) + 'm',
-                axialStepLen: (axialStepLen * metersPerDegreeLng).toFixed(2) + 'm',
-                stepPerp: (stepPerp * metersPerDegreeLat).toFixed(2) + 'm',
-                bbox: bbox.map(v => v.toFixed(6))
-            });
-
-            // 6. OPTIMIZATION LOOP - matching QGIS exactly
-            const anchorModes = ['bottom_left', 'bottom_right', 'top_left', 'top_right'];
-            const optimizationSteps = 10;  // Same as QGIS Config.OPTIMIZATION_STEPS
-            
-            let bestPanels = [];
-            let bestConfig = null;
-            
-            console.log(`Starting optimization: ${anchorModes.length} anchors × ${optimizationSteps}² offsets = ${anchorModes.length * optimizationSteps * optimizationSteps} configurations`);
-
-            // For each anchor mode
-            for (const anchor of anchorModes) {
-                // For each row offset (10 steps)
-                for (let i = 0; i < optimizationSteps; i++) {
-                    const rowOffset = (i / optimizationSteps) * stepPerp;
-                    
-                    // For each column offset (10 steps)
-                    for (let j = 0; j < optimizationSteps; j++) {
-                        const colOffset = (j / optimizationSteps) * axialStepLen;
-                        
-                        // Fill with this configuration
-                        const testPanels = this.fillWithOffsets(
-                            buffered,
-                            minLat, maxLat, minLng, maxLng,
-                            stepPerp, axialStepLen,
-                            panelLatSize, panelLngSize,
-                            rowOffset, colOffset,
-                            anchor,
-                            config
-                        );
-                        
-                        // Keep best
-                        if (testPanels.length > bestPanels.length) {
-                            bestPanels = testPanels;
-                            bestConfig = { anchor, rowOffset, colOffset, count: testPanels.length };
-                            console.log(`  New best: ${testPanels.length} panels (${anchor}, row=${i}, col=${j})`);
-                        }
-                    }
-                }
-            }
-
-            console.log('Best configuration:', bestConfig);
-            return bestPanels;
-
-        } catch (error) {
-            console.error('Error in fillPolygonOptimized:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Fill with specific offsets and anchor mode
-     * WITH FINE SCAN to start each row at polygon edge
-     */
-    fillWithOffsets(buffered, minLat, maxLat, minLng, maxLng, 
-                    stepPerp, axialStepLen, panelLatSize, panelLngSize,
-                    rowOffset, colOffset, anchor, config) {
-        const panels = [];
-        
-        // Determine starting positions based on anchor
-        let startLat, endLat, latDirection;
-        let searchStartLng, searchEndLng, lngDirection;
-        
-        switch(anchor) {
-            case 'bottom_left':
-                startLat = minLat + rowOffset;
-                endLat = maxLat;
-                latDirection = 1;
-                searchStartLng = minLng + colOffset;
-                searchEndLng = maxLng;
-                lngDirection = 1;
-                break;
-                
-            case 'bottom_right':
-                startLat = minLat + rowOffset;
-                endLat = maxLat;
-                latDirection = 1;
-                searchStartLng = maxLng - colOffset - panelLngSize;
-                searchEndLng = minLng;
-                lngDirection = -1;
-                break;
-                
-            case 'top_left':
-                startLat = maxLat - rowOffset - panelLatSize;
-                endLat = minLat;
-                latDirection = -1;
-                searchStartLng = minLng + colOffset;
-                searchEndLng = maxLng;
-                lngDirection = 1;
-                break;
-                
-            case 'top_right':
-                startLat = maxLat - rowOffset - panelLatSize;
-                endLat = minLat;
-                latDirection = -1;
-                searchStartLng = maxLng - colOffset - panelLngSize;
-                searchEndLng = minLng;
-                lngDirection = -1;
-                break;
-        }
-        
-        const metersPerDegreeLng = 111320 * Math.cos(startLat * Math.PI / 180);
-        const hSpacingLng = config.hSpacing / metersPerDegreeLng;
-        const halfPanelLngSize = panelLngSize / 2;
-        
-        // Fill row by row
-        for (let lat = startLat; 
-             latDirection > 0 ? (lat + panelLatSize <= endLat) : (lat >= endLat); 
-             lat += latDirection * stepPerp) {
-            
-            const centerLat = lat + panelLatSize / 2;
-            
-            // FINE SCAN: Find the first valid position on this row
-            const scanStep = axialStepLen / 50; // Ultra-fine scan (2% of panel width)
-            let nextPanelLng = null; // Position for NEXT panel (after first)
-            let firstPanelPlaced = false;
-            
-            // Scan to find the first valid position
-            for (let lng = searchStartLng;
-                 lngDirection > 0 ? (lng + panelLngSize <= searchEndLng) : (lng >= searchEndLng);
-                 lng += lngDirection * scanStep) {
-                
-                const centerLng = lng + panelLngSize / 2;
-                
-                const rect = this.createRotatedRectangle(
-                    [centerLng, centerLat],
-                    panelLngSize,
-                    panelLatSize,
-                    config.orientation
-                );
-                
-                if (this.isPanelFullyContained(rect, buffered)) {
-                    // Add this first panel
-                    panels.push({
-                        geometry: rect,
-                        type: 'full',
-                        center: [centerLng, centerLat]
-                    });
-                    firstPanelPlaced = true;
-                    
-                    // Calculate position for NEXT panel: current position + panel width + spacing
-                    nextPanelLng = lng + lngDirection * (panelLngSize + hSpacingLng);
-                    break;
-                }
-            }
-            
-            // If no full panel fits at start, try half panel if allowed
-            if (!firstPanelPlaced && config.allowHalf) {
-                for (let lng = searchStartLng;
-                     lngDirection > 0 ? (lng + halfPanelLngSize <= searchEndLng) : (lng >= searchEndLng);
-                     lng += lngDirection * scanStep) {
-                    
-                    const centerLng = lng + halfPanelLngSize / 2;
-                    
-                    const halfRect = this.createRotatedRectangle(
-                        [centerLng, centerLat],
-                        halfPanelLngSize,
-                        panelLatSize,
-                        config.orientation
-                    );
-                    
-                    if (this.isPanelFullyContained(halfRect, buffered)) {
-                        panels.push({
-                            geometry: halfRect,
-                            type: 'half',
-                            center: [centerLng, centerLat]
-                        });
-                        firstPanelPlaced = true;
-                        
-                        // Next panel position: current + half panel + spacing
-                        nextPanelLng = lng + lngDirection * (halfPanelLngSize + hSpacingLng);
-                        break;
-                    }
-                }
-            }
-            
-            // If we found a valid start, continue filling this row with regular spacing
-            if (nextPanelLng !== null) {
-                let lng = nextPanelLng;
-                
-                while (lngDirection > 0 ? (lng + halfPanelLngSize <= searchEndLng) : (lng >= searchEndLng)) {
-                    let centerLng = lng + panelLngSize / 2;
-                    let placed = false;
-                    
-                    // Try full panel first (ONLY if it fits completely)
-                    if ((lngDirection > 0 && lng + panelLngSize <= searchEndLng) || 
-                        (lngDirection < 0 && lng >= searchEndLng + panelLngSize)) {
-                        
-                        const rect = this.createRotatedRectangle(
-                            [centerLng, centerLat],
-                            panelLngSize,
-                            panelLatSize,
-                            config.orientation
-                        );
-                        
-                        if (this.isPanelFullyContained(rect, buffered)) {
-                            panels.push({
-                                geometry: rect,
-                                type: 'full',
-                                center: [centerLng, centerLat]
-                            });
-                            
-                            // Advance by full panel + spacing
-                            lng += lngDirection * (panelLngSize + hSpacingLng);
-                            placed = true;
-                            continue; // Go to next iteration immediately
-                        }
-                    }
-                    
-                    // If full panel didn't fit AND half panels allowed, try half panel
-                    if (!placed && config.allowHalf && 
-                        ((lngDirection > 0 && lng + halfPanelLngSize <= searchEndLng) || 
-                         (lngDirection < 0 && lng >= searchEndLng + halfPanelLngSize))) {
-                        
-                        centerLng = lng + halfPanelLngSize / 2;
-                        
-                        const halfRect = this.createRotatedRectangle(
-                            [centerLng, centerLat],
-                            halfPanelLngSize,
-                            panelLatSize,
-                            config.orientation
-                        );
-                        
-                        if (this.isPanelFullyContained(halfRect, buffered)) {
-                            panels.push({
-                                geometry: halfRect,
-                                type: 'half',
-                                center: [centerLng, centerLat]
-                            });
-                            
-                            // Advance by HALF panel + spacing
-                            lng += lngDirection * (halfPanelLngSize + hSpacingLng);
-                            placed = true;
-                            continue; // Go to next iteration immediately
-                        }
-                    }
-                    
-                    // If nothing placed, stop this row
-                    if (!placed) {
-                        break;
-                    }
-                }
-            }
-        }
-        
-        return panels;
-    },
-
-    /**
-     * Add half panels at the end of each row
-     */
-    addHalfPanelsAtRowEnds(fullPanels, buffered, panelLatSize, panelLngSize, config, anchor, lngDirection) {
-        const halfPanels = [];
-        
-        if (fullPanels.length === 0) return halfPanels;
-        
-        const halfPanelLngSize = panelLngSize / 2;
-        const sampleLat = fullPanels[0]?.center[1] || 0;
-        const metersPerDegreeLng = 111320 * Math.cos(sampleLat * Math.PI / 180);
-        const hSpacingLng = config.hSpacing / metersPerDegreeLng;
-        
-        // Group panels by row
-        const rows = new Map();
-        fullPanels.forEach(panel => {
-            const rowKey = Math.round(panel.center[1] * 100000);
-            if (!rows.has(rowKey)) {
-                rows.set(rowKey, []);
-            }
-            rows.get(rowKey).push(panel);
-        });
-        
-        // For each row, try to add a half panel at the end
-        rows.forEach((rowPanels, rowKey) => {
-            if (rowPanels.length === 0) return;
-            
-            // Sort by longitude
-            rowPanels.sort((a, b) => lngDirection * (a.center[0] - b.center[0]));
-            
-            // Get last panel
-            const lastPanel = rowPanels[rowPanels.length - 1];
-            const centerLat = lastPanel.center[1];
-            
-            // Calculate position for half panel
-            const halfCenterLng = lastPanel.center[0] + 
-                                 lngDirection * (panelLngSize/2 + hSpacingLng + halfPanelLngSize/2);
-            
-            const rect = this.createRotatedRectangle(
-                [halfCenterLng, centerLat],
-                halfPanelLngSize,
-                panelLatSize,
-                config.orientation
-            );
-            
-            if (this.isPanelFullyContained(rect, buffered)) {
-                halfPanels.push({
-                    geometry: rect,
-                    type: 'half',
-                    center: [halfCenterLng, centerLat]
-                });
-            }
-        });
-        
-        return halfPanels;
     },
 
     /**
@@ -829,6 +412,10 @@ const GeoflowCalepinage = {
             generateBtn.disabled = false;
         }
     },
+
+    /**
+     * Main generate function - Uses Web Worker only
+     */
     async generate() {
         if (!GeoflowDraw || !GeoflowDraw.drawnItems) {
             GeoflowUtils.showToast('Module de dessin non disponible', 'error');
@@ -868,30 +455,43 @@ const GeoflowCalepinage = {
                 });
             }
 
-            // Try to use Web Worker if available
-            if (typeof Worker !== 'undefined' && this.useWebWorker) {
-                this.generateWithWorker(polygon, config);
-            } else {
-                // Fallback to main thread
-                this.generateInMainThread(polygon, config);
+            // Check if Web Worker is supported
+            if (typeof Worker === 'undefined') {
+                this.hideProgress();
+                GeoflowUtils.showToast('Les Web Workers ne sont pas supportés par votre navigateur. Cette fonctionnalité nécessite un navigateur moderne.', 'error');
+                return;
             }
 
+            // Use Web Worker
+            this.generateWithWorker(polygon, config);
+
         } catch (error) {
-            GeoflowUtils.hideLoading();
+            this.hideProgress();
             console.error('Erreur génération calepinage:', error);
             GeoflowUtils.showToast('Erreur: ' + error.message, 'error');
         }
     },
 
     /**
-     * Generate using Web Worker (non-blocking)
+     * Generate using Web Worker
      */
     generateWithWorker(polygon, config) {
         this.showProgress();
         this.updateProgress(0, 'Initialisation...', 'Démarrage du calcul en arrière-plan');
         
         // Create worker
-        const worker = new Worker('js/calepinage-worker.js');
+        let worker;
+        try {
+            worker = new Worker('js/calepinage-worker.js');
+        } catch (error) {
+            this.hideProgress();
+            console.error('Erreur lors de la création du Worker:', error);
+            GeoflowUtils.showToast(
+                'Impossible de charger le module de calcul. Vérifiez que le fichier calepinage-worker.js est présent dans le dossier js/', 
+                'error'
+            );
+            return;
+        }
         
         // Handle messages from worker
         worker.onmessage = (e) => {
@@ -908,13 +508,13 @@ const GeoflowCalepinage = {
                 
                 if (error) {
                     this.hideProgress();
-                    GeoflowUtils.showToast('Erreur: ' + error, 'error');
+                    GeoflowUtils.showToast('Erreur lors du calcul: ' + error, 'error');
                     return;
                 }
                 
                 if (panels.length === 0) {
                     this.hideProgress();
-                    GeoflowUtils.showToast('Aucun panneau généré', 'warning');
+                    GeoflowUtils.showToast('Aucun panneau généré avec les paramètres actuels', 'warning');
                     return;
                 }
                 
@@ -936,14 +536,14 @@ const GeoflowCalepinage = {
         
         // Handle worker errors
         worker.onerror = (error) => {
-            console.error('Worker error:', error);
+            console.error('Erreur du Web Worker:', error);
             worker.terminate();
             this.hideProgress();
             
-            // Fallback to main thread
-            console.log('Worker failed, falling back to main thread...');
-            GeoflowUtils.showToast('Calcul en thread principal...', 'info');
-            this.generateInMainThread(polygon, config);
+            GeoflowUtils.showToast(
+                'Erreur lors du calcul dans le Web Worker. Vérifiez la console pour plus de détails.', 
+                'error'
+            );
         };
         
         // Send work to worker
@@ -957,63 +557,8 @@ const GeoflowCalepinage = {
     },
 
     /**
-     * Generate in main thread (blocking, fallback)
+     * Display panels on the map
      */
-    async generateInMainThread(polygon, config) {
-        this.showProgress();
-        this.updateProgress(0, 'Calcul en cours...', 'Traitement dans le thread principal');
-        
-        // Small delay to let UI update
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        try {
-            console.log('🔄 Starting optimization in main thread...');
-            const startTime = performance.now();
-            
-            // Simulate progress updates (since we can't get real progress in main thread)
-            const progressInterval = setInterval(() => {
-                const elapsed = (performance.now() - startTime) / 1000;
-                const estimatedProgress = Math.min(90, (elapsed / 5) * 100); // Estimate 5s total
-                this.updateProgress(
-                    estimatedProgress, 
-                    'Calcul en cours...', 
-                    `${Math.round(elapsed)}s écoulées`
-                );
-            }, 200);
-            
-            const panels = this.fillPolygonOptimized(polygon, config);
-            const duration = ((performance.now() - startTime) / 1000).toFixed(2);
-            
-            clearInterval(progressInterval);
-            
-            console.log(`✅ Optimization complete in ${duration}s: ${panels.length} panels`);
-
-            if (panels.length === 0) {
-                this.hideProgress();
-                GeoflowUtils.showToast('Aucun panneau généré', 'warning');
-                return;
-            }
-
-            this.updateProgress(100, 'Terminé !', `${panels.length} panneaux générés en ${duration}s`);
-            
-            setTimeout(() => {
-                this.displayPanels(panels, config);
-                this.displayStats(panels, config, polygon);
-                this.hideProgress();
-                
-                GeoflowUtils.showToast(`${panels.length} panneau(x) généré(s) en ${duration}s`, 'success');
-            }, 300);
-
-        } catch (error) {
-            this.hideProgress();
-            console.error('Erreur génération:', error);
-            GeoflowUtils.showToast('Erreur: ' + error.message, 'error');
-        }
-    },
-
-    // Flag to enable/disable Web Worker (default: true)
-    useWebWorker: true,
-
     displayPanels(panels, config) {
         this.clearResults();
 
@@ -1208,21 +753,7 @@ const GeoflowCalepinage = {
 		const fullPanels = panels.filter(p => p.type === 'full');
 		const halfPanels = panels.filter(p => p.type === 'half');
 
-		// Use exact tracing algorithm (with automatic fallback)
-		const coverageResult = this.calculateExactCoverage(panels, config, polygon);
-		
-		// Method indicators
-		const methodLabels = {
-			'exact_tracing': '✓ Traçage exact',
-			'concave_hull': '⚠ Enveloppe concave',
-			'basic': '⚠ Calcul basique',
-			'failed': '✗ Échec',
-			'none': '-'
-		};
-		
-		const methodLabel = methodLabels[coverageResult.method] || coverageResult.method;
-		
-		// ✨ CALCUL CORRIGÉ DU TAUX DE RECOUVREMENT
+		// Calcul de la surface des panneaux
 		const surfaceFull = config.panelLength * config.panelWidth;  // m²
 		const surfaceHalf = (config.panelLength / 2) * config.panelWidth;  // m²
 		const countFull = fullPanels.length;
@@ -1231,82 +762,106 @@ const GeoflowCalepinage = {
 		// Surface totale des panneaux
 		const totalPanelArea = (countFull * surfaceFull) + (countHalf * surfaceHalf);
 		
-		// Surface de l'enveloppe en m² (hullArea est déjà en m²)
-		const hullAreaM2 = coverageResult.hullArea;
-		
-		// Taux de recouvrement (formule QGIS)
-		const tauxRecouvrement = (totalPanelArea * 100) / hullAreaM2;
-		
-		console.log(`📊 Calcul du taux de recouvrement:`);
-		console.log(`   Tables entières: ${countFull} × ${surfaceFull.toFixed(2)}m² = ${(countFull * surfaceFull).toFixed(2)}m²`);
-		console.log(`   Demi-tables: ${countHalf} × ${surfaceHalf.toFixed(2)}m² = ${(countHalf * surfaceHalf).toFixed(2)}m²`);
-		console.log(`   Surface panneaux totale: ${totalPanelArea.toFixed(2)}m²`);
-		console.log(`   Surface enveloppe: ${hullAreaM2.toFixed(2)}m²`);
-		console.log(`   Taux: ${tauxRecouvrement.toFixed(1)}%`);
-		
-		// Display coverage hull on map
-		if (coverageResult.hull && this.resultLayer) {
-			const hullStyle = {
-				color: '#ef4444',  // RED for coverage envelope
-				weight: 2,
-				fillColor: 'transparent',
-				opacity: 0.8
-			};
-			
-			const hullLayer = L.geoJSON(coverageResult.hull, {
-				style: hullStyle
-			});
-			
-			hullLayer.bindPopup(`
-				<div class="feature-popup">
-					<h6><i class="fa-solid fa-vector-square"></i> Enveloppe de recouvrement</h6>
-					<table>
-						<tr>
-							<td>Méthode</td>
-							<td style="font-weight: 600;">${methodLabel}</td>
-						</tr>
-						${coverageResult.tracedPoints ? `
-						<tr>
-							<td>Points tracés</td>
-							<td>${coverageResult.tracedPoints}</td>
-						</tr>
-						` : ''}
-						<tr>
-							<td>Tables entières</td>
-							<td>${countFull}</td>
-						</tr>
-						<tr>
-							<td>Demi-tables</td>
-							<td>${countHalf}</td>
-						</tr>
-						<tr>
-							<td>Surface panneaux</td>
-							<td>${totalPanelArea.toFixed(0)} m²</td>
-						</tr>
-						<tr>
-							<td>Surface enveloppe</td>
-							<td>${hullAreaM2.toFixed(0)} m²</td>
-						</tr>
-						<tr>
-							<td>Taux</td>
-							<td style="font-weight: 600; color: #10b981;">${tauxRecouvrement.toFixed(1)}%</td>
-						</tr>
-					</table>
-				</div>
-			`);
-			
-			this.resultLayer.addLayer(hullLayer);
-		}
-
-		// Update stats display
+		// Update stats display - partie basique
 		document.getElementById('stat-full').textContent = countFull;
 		document.getElementById('stat-half').textContent = countHalf;
 		document.getElementById('stat-area').textContent = totalPanelArea.toFixed(0) + ' m²';
-		document.getElementById('stat-coverage').textContent = tauxRecouvrement.toFixed(1) + '%';
+
+		// Calcul du recouvrement seulement si demandé
+		if (config.calculateCoverage) {
+			// Utiliser l'algorithme de traçage exact
+			const coverageResult = this.calculateExactCoverage(panels, config, polygon);
+			
+			const methodLabels = {
+				'exact_tracing': '✓ Traçage exact',
+				'concave_hull': '⚠ Enveloppe concave',
+				'basic': '⚠ Calcul basique',
+				'failed': '✗ Échec',
+				'none': '-'
+			};
+			
+			const methodLabel = methodLabels[coverageResult.method] || coverageResult.method;
+			
+			// Surface de l'enveloppe en m²
+			const hullAreaM2 = coverageResult.hullArea;
+			
+			// Taux de recouvrement
+			const tauxRecouvrement = (totalPanelArea * 100) / hullAreaM2;
+			
+			console.log(`📊 Calcul du taux de recouvrement:`);
+			console.log(`   Tables entières: ${countFull} × ${surfaceFull.toFixed(2)}m² = ${(countFull * surfaceFull).toFixed(2)}m²`);
+			console.log(`   Demi-tables: ${countHalf} × ${surfaceHalf.toFixed(2)}m² = ${(countHalf * surfaceHalf).toFixed(2)}m²`);
+			console.log(`   Surface panneaux totale: ${totalPanelArea.toFixed(2)}m²`);
+			console.log(`   Surface enveloppe: ${hullAreaM2.toFixed(2)}m²`);
+			console.log(`   Taux: ${tauxRecouvrement.toFixed(1)}%`);
+			
+			// Afficher l'enveloppe sur la carte
+			if (coverageResult.hull && this.resultLayer) {
+				const hullStyle = {
+					color: '#ef4444',
+					weight: 2,
+					fillColor: 'transparent',
+					opacity: 0.8
+				};
+				
+				const hullLayer = L.geoJSON(coverageResult.hull, {
+					style: hullStyle
+				});
+				
+				hullLayer.bindPopup(`
+					<div class="feature-popup">
+						<h6><i class="fa-solid fa-vector-square"></i> Enveloppe de recouvrement</h6>
+						<table>
+							<tr>
+								<td>Méthode</td>
+								<td style="font-weight: 600;">${methodLabel}</td>
+							</tr>
+							${coverageResult.tracedPoints ? `
+							<tr>
+								<td>Points tracés</td>
+								<td>${coverageResult.tracedPoints}</td>
+							</tr>
+							` : ''}
+							<tr>
+								<td>Tables entières</td>
+								<td>${countFull}</td>
+							</tr>
+							<tr>
+								<td>Demi-tables</td>
+								<td>${countHalf}</td>
+							</tr>
+							<tr>
+								<td>Surface panneaux</td>
+								<td>${totalPanelArea.toFixed(0)} m²</td>
+							</tr>
+							<tr>
+								<td>Surface enveloppe</td>
+								<td>${hullAreaM2.toFixed(0)} m²</td>
+							</tr>
+							<tr>
+								<td>Taux</td>
+								<td style="font-weight: 600; color: #10b981;">${tauxRecouvrement.toFixed(1)}%</td>
+							</tr>
+						</table>
+					</div>
+				`);
+				
+				this.resultLayer.addLayer(hullLayer);
+			}
+
+			document.getElementById('stat-coverage').textContent = tauxRecouvrement.toFixed(1) + '%';
+		} else {
+			// Si le calcul n'est pas demandé, afficher "non calculé"
+			document.getElementById('stat-coverage').textContent = 'non calculé';
+			document.getElementById('stat-coverage').style.color = 'var(--text-secondary)';
+		}
 
 		document.getElementById('calepinage-stats').style.display = 'block';
 	},
 
+    /**
+     * Clear results
+     */
     clearResults() {
         if (this.resultLayer) {
             GeoflowDraw.drawnItems.removeLayer(this.resultLayer);
