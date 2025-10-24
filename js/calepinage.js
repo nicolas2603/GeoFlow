@@ -127,7 +127,7 @@ const GeoflowCalepinage = {
 					</div>
 					<div class="tool-card mode-card ${this.currentMode === 'plantation' ? 'active' : ''}" data-mode="plantation">
 						<i class="fa-solid fa-tree"></i>
-						<div class="tool-card-label">Plantation</div>
+						<div class="tool-card-label">Plantations</div>
 					</div>
 					<div class="tool-card mode-card" data-mode="future" style="opacity: 0.4; cursor: not-allowed;">
 						<i class="fa-solid fa-plus"></i>
