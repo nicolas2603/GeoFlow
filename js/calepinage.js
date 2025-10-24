@@ -100,7 +100,7 @@ const GeoflowCalepinage = {
             treeDiameter: 6.0,
             hSpacing: 8.0,
             vSpacing: 8.0,
-            edgeMargin: 2.0,
+            edgeMargin: 1.0,
             orientation: 0,
             calculateCoverage: false
         }
@@ -225,14 +225,14 @@ const GeoflowCalepinage = {
             <!-- Dimensions -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
                 <div>
-                    <label style="display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">
+                    <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">
                         Longueur (m)
                     </label>
                     <input type="number" id="calepinage-length" class="form-control form-control-sm" 
                            value="${config.panelLength}" step="0.1" min="0.1">
                 </div>
                 <div>
-                    <label style="display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px;">
+                    <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">
                         Largeur (m)
                     </label>
                     <input type="number" id="calepinage-width" class="form-control form-control-sm" 
@@ -265,7 +265,7 @@ const GeoflowCalepinage = {
 
             <!-- Marge de sécurité -->
             <div style="margin-bottom: 14px;">
-                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
+                <label style="display: block; font-size: 0.75rem; color: var(--text-primary); margin-bottom: 6px;">
                     Marge de sécurité (m)
                 </label>
                 <input type="number" id="calepinage-margin" class="form-control form-control-sm" 
@@ -297,7 +297,7 @@ const GeoflowCalepinage = {
             <!-- Boutons d'action -->
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                 <button class="btn btn-sm btn-primary flex-fill" id="calepinage-generate">
-                    <i class="fa-solid fa-solar-panel"></i> Générer
+                    <i class="fa-solid fa-grip"></i> Générer
                 </button>
                 <button class="btn btn-sm btn-danger" id="calepinage-clear" style="width: 44px;">
                     <i class="fa-solid fa-trash"></i>
@@ -332,13 +332,18 @@ const GeoflowCalepinage = {
                 </select>
             </div>
 
-            <!-- Diamètre de couronne -->
-            <div style="margin-bottom: 14px;">
-                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
-                    Diamètre de couronne adulte (m)
-                </label>
-                <input type="number" id="plantation-diameter" class="form-control form-control-sm" 
+            <!-- Dimensions -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+                <div>
+                    <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">
+                        Diamètre (m)
+                    </label>
+                    <input type="number" id="plantation-diameter" class="form-control form-control-sm" 
                        value="${config.treeDiameter}" step="0.5" min="0.5">
+                </div>
+                <div>
+               
+                </div>
             </div>
 
             <!-- Espacements -->
@@ -356,7 +361,7 @@ const GeoflowCalepinage = {
                     </div>
                     <div>
                         <label style="display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">
-                            Entre rangées (m)
+                            Interrang (m)
                         </label>
                         <input type="number" id="plantation-v-spacing" class="form-control form-control-sm" 
                                value="${config.vSpacing}" step="0.5" min="0">
@@ -366,8 +371,8 @@ const GeoflowCalepinage = {
 
             <!-- Marge de sécurité -->
             <div style="margin-bottom: 14px;">
-                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
-                    Marge périphérique (m)
+                <label style="display: block; font-size: 0.75rem; color: var(--text-primary); margin-bottom: 6px;">
+                    Marge de sécurité (m)
                 </label>
                 <input type="number" id="plantation-margin" class="form-control form-control-sm" 
                        value="${config.edgeMargin}" step="0.5" min="0">
@@ -386,7 +391,7 @@ const GeoflowCalepinage = {
             <!-- Boutons d'action -->
             <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                 <button class="btn btn-sm btn-primary flex-fill" id="plantation-generate">
-                    <i class="fa-solid fa-tree"></i> Générer
+                    <i class="fa-solid fa-grip"></i> Générer
                 </button>
                 <button class="btn btn-sm btn-danger" id="plantation-clear" style="width: 44px;">
                     <i class="fa-solid fa-trash"></i>
