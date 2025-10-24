@@ -217,7 +217,7 @@
     "legend": true,
     "draw": true,
     "measure": true,
-    "enr": true,
+    "metier": true,
     "tools": true,
     "export": true,
     "print": true,

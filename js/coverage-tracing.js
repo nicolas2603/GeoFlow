@@ -29,7 +29,7 @@ const GeoflowCoverageTracing = {
      */
     traceCoverageBoundary(panels, hSpacing, vSpacing, orientation) {
         try {
-            console.log(`🎯 Starting coverage tracing: ${panels.length} panels`);
+            //console.log(`🎯 Starting coverage tracing: ${panels.length} panels`);
             const startTime = performance.now();
             
             this.resetState();
@@ -44,13 +44,13 @@ const GeoflowCoverageTracing = {
             };
             this.isTracker = isTracker;
             
-            console.log(`📏 Tolerances: X=${this.tolerance.x.toFixed(3)}m, Y=${this.tolerance.y.toFixed(3)}m`);
+            //console.log(`📏 Tolerances: X=${this.tolerance.x.toFixed(3)}m, Y=${this.tolerance.y.toFixed(3)}m`);
             
             const preparedPanels = this.preparePanels(panels, isTracker);
             if (preparedPanels.length === 0) return null;
             
             const rows = this.organizePanelsIntoRows(preparedPanels);
-            console.log(`📊 Organized into ${rows.length} rows`);
+            //console.log(`📊 Organized into ${rows.length} rows`);
             
             const panelPositions = new Map();
             rows.forEach((row, i) => {
@@ -62,18 +62,20 @@ const GeoflowCoverageTracing = {
             const firstPanel = rows[0][0];
             const startPoint = this.getStartingPoint(firstPanel, isTracker);
             
-            console.log(`🚀 Starting from panel ${firstPanel.id}`);
+            //console.log(`🚀 Starting from panel ${firstPanel.id} and point ${startPoint}`);
             
             this.generateSegmentsIterative(firstPanel, startPoint, rows, panelPositions);
             
-            console.log(`📦 Generated ${this.state.segments.length} segments`);
+            //console.log(`📦 Generated ${this.state.segments.length} segments`);
             
             if (this.state.segments.length === 0) {
                 console.error('❌ NO SEGMENTS GENERATED');
                 return null;
             }
             
-            const assembledPoints = this.assembleSegmentsSmartly();
+            const assembledPoints = this.assembleSegmentsSmartly(startPoint);
+            
+            //this.exportSegmentsToGeoJSON();
             
             if (!assembledPoints || assembledPoints.length < 3) {
                 console.warn('Failed to assemble valid polygon');
@@ -81,7 +83,6 @@ const GeoflowCoverageTracing = {
             }
             
             const duration = ((performance.now() - startTime) / 1000).toFixed(2);
-            console.log(`✅ Complete: ${assembledPoints.length} points in ${duration}s`);
             
             return assembledPoints;
             
@@ -111,17 +112,14 @@ const GeoflowCoverageTracing = {
         while (this.state.callStack.length > 0) {
             this.state.iterations++;
             
-            if (this.state.iterations % 5000 === 0) {
-                console.log(`   Iteration ${this.state.iterations}: ${this.state.segments.length} segments`);
-            }
-            
             if (this.state.iterations > this.maxIterations) {
-                console.warn(`⚠️ Max iterations reached`);
                 break;
             }
             
             const call = this.state.callStack.pop();
             const [method, ...args] = call;
+            
+            //console.log('Method:', method, 'args:', args);
             
             switch(method) {
                 case 'tracer_recouvrement': this._tracerRecouvrement(...args); break;
@@ -145,12 +143,10 @@ const GeoflowCoverageTracing = {
     /**
      * SMART ASSEMBLY using graph traversal
      */
-    assembleSegmentsSmartly() {
+    assembleSegmentsSmartly(forcedStartPoint = null) {
         const segments = this.state.segments;
         
         if (segments.length === 0) return null;
-        
-        console.log(`🔧 Smart assembly of ${segments.length} segments...`);
         
         // Build adjacency graph
         const graph = new Map();
@@ -167,15 +163,17 @@ const GeoflowCoverageTracing = {
         });
         
         // Find starting point
-        let startPoint = null;
-        let startKey = null;
+        let startPoint = forcedStartPoint;
+        let startKey = forcedStartPoint ? this._pointKey(forcedStartPoint) : null;
         
-        for (const [key, edges] of graph.entries()) {
-            if (edges.length === 1) {
-                startKey = key;
-                const coords = key.split(',');
-                startPoint = [parseFloat(coords[0]), parseFloat(coords[1])];
-                break;
+        if (!startPoint) {
+            for (const [key, edges] of graph.entries()) {
+                if (edges.length === 1) {
+                    startKey = key;
+                    const coords = key.split(',');
+                    startPoint = [parseFloat(coords[0]), parseFloat(coords[1])];
+                    break;
+                }
             }
         }
         
@@ -184,7 +182,7 @@ const GeoflowCoverageTracing = {
             startKey = this._pointKey(startPoint);
         }
         
-        console.log(`🚦 Starting assembly from [${startPoint[0].toFixed(6)}, ${startPoint[1].toFixed(6)}]`);
+        //console.log(`🚦 Starting assembly from [${startPoint[0].toFixed(6)}, ${startPoint[1].toFixed(6)}]`);
         
         // Traverse graph
         const path = [[...startPoint]];
@@ -209,7 +207,7 @@ const GeoflowCoverageTracing = {
             if (!nextEdge) {
                 for (const seg of segments) {
                     if (!usedSegments.has(seg.id)) {
-                        console.warn(`⚠️ Gap at iteration ${iterations}, jumping to segment ${seg.id}`);
+                        //console.warn(`⚠️ Gap at iteration ${iterations}, jumping to segment ${seg.id}`);
                         path.push([...seg.p1]);
                         path.push([...seg.p2]);
                         usedSegments.add(seg.id);
@@ -235,9 +233,48 @@ const GeoflowCoverageTracing = {
             }
         }
         
-        console.log(`✅ Assembled ${path.length} points (${usedSegments.size}/${segments.length} segments)`);
+        //console.log(`✅ Assembled ${path.length} points (${usedSegments.size}/${segments.length} segments)`);
         
         return path;
+    },
+    
+    exportSegmentsToGeoJSON() {
+        if (!this.state || !this.state.segments || this.state.segments.length === 0) {
+            console.warn('⚠️ Aucun segment à exporter');
+            return null;
+        }
+
+        const features = this.state.segments.map(seg => ({
+            type: 'Feature',
+            geometry: {
+                type: 'LineString',
+                coordinates: [seg.p1, seg.p2],
+            },
+            properties: {
+                id: seg.id,
+                note: seg.note || '',
+                order: seg.order || 0,
+            },
+        }));
+
+        const geojson = {
+            type: 'FeatureCollection',
+            features: features,
+        };
+
+        const blob = new Blob([JSON.stringify(geojson, null, 2)], {
+            type: 'application/geo+json',
+        });
+        const url = URL.createObjectURL(blob);
+
+        // Force download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'coverage_segments_debug.geojson';
+        a.click();
+
+        console.log(`💾 Exported ${features.length} segments to coverage_segments_debug.geojson`);
+        return geojson;
     },
     
     _pointKey(point) {
@@ -625,7 +662,7 @@ const GeoflowCoverageTracing = {
             let normalizedCoords = coords.slice(0, 4);
             
             if (isTracker) {
-                normalizedCoords = [normalizedCoords[1], normalizedCoords[2], normalizedCoords[3], normalizedCoords[0]];
+                normalizedCoords = [normalizedCoords[3], normalizedCoords[0], normalizedCoords[1], normalizedCoords[2]];
             }
             
             const sumX = normalizedCoords.reduce((sum, c) => sum + c[0], 0);

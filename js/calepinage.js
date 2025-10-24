@@ -137,9 +137,6 @@ const GeoflowCalepinage = {
                 <button class="btn btn-sm btn-primary flex-fill" id="calepinage-generate">
                     <i class="fa-solid fa-solar-panel"></i> Générer
                 </button>
-				<button class="btn btn-sm btn-success flex-fill" id="calepinage-export-geojson" disabled>
-                    <i class="fa-solid fa-download"></i> GeoJSON
-                </button>
                 <button class="btn btn-sm btn-danger" id="calepinage-clear" style="width: 44px;">
                     <i class="fa-solid fa-trash"></i>
                 </button>
@@ -190,6 +187,14 @@ const GeoflowCalepinage = {
                         </div>
                     </div>
                 </div>
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button class="btn btn-sm btn-success flex-fill" id="calepinage-export-geojson" disabled>
+                        <i class="fa-solid fa-download"></i> Panneaux
+                    </button>
+                    <button class="btn btn-sm btn-warning flex-fill" id="covering-export-geojson" disabled>
+                        <i class="fa-solid fa-download"></i> Recouvrement
+                    </button>
+                </div>
             </div>
         `;
     },
@@ -236,6 +241,13 @@ const GeoflowCalepinage = {
         if (exportGeoJsonBtn) {
             exportGeoJsonBtn.addEventListener('click', () => {
                 this.exportToGeoJSON();
+            });
+        }
+        
+        const exportCoveringBtn = document.getElementById('covering-export-geojson');
+        if (exportCoveringBtn) {
+            exportCoveringBtn.addEventListener('click', () => {
+                this.exportCoveringToGeoJSON();
             });
         }
     },
@@ -331,7 +343,9 @@ const GeoflowCalepinage = {
                         ? config.panelLength * config.panelWidth 
                         : (config.panelLength / 2) * config.panelWidth,
                     orientation: config.orientation,
-                    h_spacing: config.hSpacing
+                    h_spacing: config.hSpacing,
+                    source: '©Geoflow',
+                    date: new Date().toISOString()
                 },
                 geometry: panel.geometry.geometry
             }))
@@ -350,7 +364,58 @@ const GeoflowCalepinage = {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        GeoflowUtils.showToast(`${this.generatedPanels.length} panneau(x) exporté(s)`, 'success');
+        GeoflowUtils.showToast('Couche des panneaux exportée', 'success');
+    },
+    
+    /**
+     * Export boundary polygon (covering) to GeoJSON
+     */
+    exportCoveringToGeoJSON() {
+        if (!this.boundaryPolygon) {
+            GeoflowUtils.showToast('Aucun polygone de recouvrement disponible', 'warning');
+            return;
+        }
+
+        // Lecture des valeurs depuis le panneau de stats
+        const coverageValue = document.getElementById('stat-coverage')?.textContent?.replace('%', '').trim() || null;
+        const fullCount = parseInt(document.getElementById('stat-full')?.textContent || 0);
+        const halfCount = parseInt(document.getElementById('stat-half')?.textContent || 0);
+        const areaText = document.getElementById('stat-area')?.textContent?.replace('m²', '').trim() || '0';
+        const areaM2 = parseFloat(areaText.replace(',', '.')) || 0;
+
+        // Création de la feature GeoJSON
+        const featureCollection = {
+            type: 'FeatureCollection',
+            features: [{
+                type: 'Feature',
+                id: 0,
+                properties: {
+                    id: 0,
+                    area_m2: areaM2,
+                    full_table: fullCount,
+                    half_table: halfCount,
+                    covering: coverageValue ? parseFloat(coverageValue) : null,
+                    source: '©Geoflow',
+                    date: new Date().toISOString()
+                },
+                geometry: this.boundaryPolygon.geometry
+            }]
+        };
+
+        // Export en .geojson
+        const jsonString = JSON.stringify(featureCollection, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `covering_${Date.now()}.geojson`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        GeoflowUtils.showToast('Polygone de recouvrement exporté avec statistiques', 'success');
     },
 
     /**
@@ -747,117 +812,120 @@ const GeoflowCalepinage = {
     },
     
     /**
-	 * Display statistics with exact coverage calculation
-	 */
-	displayStats(panels, config, polygon) {
-		const fullPanels = panels.filter(p => p.type === 'full');
-		const halfPanels = panels.filter(p => p.type === 'half');
+     * Display statistics with exact coverage calculation
+     */
+    displayStats(panels, config, polygon) {
+        const fullPanels = panels.filter(p => p.type === 'full');
+        const halfPanels = panels.filter(p => p.type === 'half');
 
-		// Calcul de la surface des panneaux
-		const surfaceFull = config.panelLength * config.panelWidth;  // m²
-		const surfaceHalf = (config.panelLength / 2) * config.panelWidth;  // m²
-		const countFull = fullPanels.length;
-		const countHalf = halfPanels.length;
-		
-		// Surface totale des panneaux
-		const totalPanelArea = (countFull * surfaceFull) + (countHalf * surfaceHalf);
-		
-		// Update stats display - partie basique
-		document.getElementById('stat-full').textContent = countFull;
-		document.getElementById('stat-half').textContent = countHalf;
-		document.getElementById('stat-area').textContent = totalPanelArea.toFixed(0) + ' m²';
+        // Calcul de la surface des panneaux
+        const surfaceFull = config.panelLength * config.panelWidth;  // m²
+        const surfaceHalf = (config.panelLength / 2) * config.panelWidth;  // m²
+        const countFull = fullPanels.length;
+        const countHalf = halfPanels.length;
+        
+        // Surface totale des panneaux
+        const totalPanelArea = (countFull * surfaceFull) + (countHalf * surfaceHalf);
+        
+        // Update stats display - partie basique
+        document.getElementById('stat-full').textContent = countFull;
+        document.getElementById('stat-half').textContent = countHalf;
+        document.getElementById('stat-area').textContent = totalPanelArea.toFixed(0) + ' m²';
 
-		// Calcul du recouvrement seulement si demandé
-		if (config.calculateCoverage) {
-			// Utiliser l'algorithme de traçage exact
-			const coverageResult = this.calculateExactCoverage(panels, config, polygon);
-			
-			const methodLabels = {
-				'exact_tracing': '✓ Traçage exact',
-				'concave_hull': '⚠ Enveloppe concave',
-				'basic': '⚠ Calcul basique',
-				'failed': '✗ Échec',
-				'none': '-'
-			};
-			
-			const methodLabel = methodLabels[coverageResult.method] || coverageResult.method;
-			
-			// Surface de l'enveloppe en m²
-			const hullAreaM2 = coverageResult.hullArea;
-			
-			// Taux de recouvrement
-			const tauxRecouvrement = (totalPanelArea * 100) / hullAreaM2;
-			
-			console.log(`📊 Calcul du taux de recouvrement:`);
-			console.log(`   Tables entières: ${countFull} × ${surfaceFull.toFixed(2)}m² = ${(countFull * surfaceFull).toFixed(2)}m²`);
-			console.log(`   Demi-tables: ${countHalf} × ${surfaceHalf.toFixed(2)}m² = ${(countHalf * surfaceHalf).toFixed(2)}m²`);
-			console.log(`   Surface panneaux totale: ${totalPanelArea.toFixed(2)}m²`);
-			console.log(`   Surface enveloppe: ${hullAreaM2.toFixed(2)}m²`);
-			console.log(`   Taux: ${tauxRecouvrement.toFixed(1)}%`);
-			
-			// Afficher l'enveloppe sur la carte
-			if (coverageResult.hull && this.resultLayer) {
-				const hullStyle = {
-					color: '#ef4444',
-					weight: 2,
-					fillColor: 'transparent',
-					opacity: 0.8
-				};
-				
-				const hullLayer = L.geoJSON(coverageResult.hull, {
-					style: hullStyle
-				});
-				
-				hullLayer.bindPopup(`
-					<div class="feature-popup">
-						<h6><i class="fa-solid fa-vector-square"></i> Enveloppe de recouvrement</h6>
-						<table>
-							<tr>
-								<td>Méthode</td>
-								<td style="font-weight: 600;">${methodLabel}</td>
-							</tr>
-							${coverageResult.tracedPoints ? `
-							<tr>
-								<td>Points tracés</td>
-								<td>${coverageResult.tracedPoints}</td>
-							</tr>
-							` : ''}
-							<tr>
-								<td>Tables entières</td>
-								<td>${countFull}</td>
-							</tr>
-							<tr>
-								<td>Demi-tables</td>
-								<td>${countHalf}</td>
-							</tr>
-							<tr>
-								<td>Surface panneaux</td>
-								<td>${totalPanelArea.toFixed(0)} m²</td>
-							</tr>
-							<tr>
-								<td>Surface enveloppe</td>
-								<td>${hullAreaM2.toFixed(0)} m²</td>
-							</tr>
-							<tr>
-								<td>Taux</td>
-								<td style="font-weight: 600; color: #10b981;">${tauxRecouvrement.toFixed(1)}%</td>
-							</tr>
-						</table>
-					</div>
-				`);
-				
-				this.resultLayer.addLayer(hullLayer);
-			}
+        // Calcul du recouvrement seulement si demandé
+        if (config.calculateCoverage) {
+            // Utiliser l'algorithme de traçage exact
+            const coverageResult = this.calculateExactCoverage(panels, config, polygon);
+            
+            const methodLabels = {
+                'exact_tracing': '✓ Traçage exact',
+                'concave_hull': '⚠ Enveloppe concave',
+                'basic': '⚠ Calcul basique',
+                'failed': '✗ Échec',
+                'none': '-'
+            };
+            
+            const methodLabel = methodLabels[coverageResult.method] || coverageResult.method;
+            
+            // Surface de l'enveloppe en m²
+            const hullAreaM2 = coverageResult.hullArea;
+            
+            // Taux de recouvrement
+            const tauxRecouvrement = (totalPanelArea * 100) / hullAreaM2;
+            
+            console.log(`📊 Calcul du taux de recouvrement:`);
+            console.log(`   Tables entières: ${countFull} × ${surfaceFull.toFixed(2)}m² = ${(countFull * surfaceFull).toFixed(2)}m²`);
+            console.log(`   Demi-tables: ${countHalf} × ${surfaceHalf.toFixed(2)}m² = ${(countHalf * surfaceHalf).toFixed(2)}m²`);
+            console.log(`   Surface panneaux totale: ${totalPanelArea.toFixed(2)}m²`);
+            console.log(`   Surface enveloppe: ${hullAreaM2.toFixed(2)}m²`);
+            console.log(`   Taux: ${tauxRecouvrement.toFixed(1)}%`);
+            
+            // Afficher l'enveloppe sur la carte
+            if (coverageResult.hull && this.resultLayer) {
+                this.boundaryPolygon = coverageResult.hull;
+                document.getElementById('covering-export-geojson').disabled = false;
+                
+                const hullStyle = {
+                    color: '#ef4444',
+                    weight: 2,
+                    fillColor: 'transparent',
+                    opacity: 0.8
+                };
+                
+                const hullLayer = L.geoJSON(coverageResult.hull, {
+                    style: hullStyle
+                });
+                
+                hullLayer.bindPopup(`
+                    <div class="feature-popup">
+                        <h6><i class="fa-solid fa-vector-square"></i> Enveloppe de recouvrement</h6>
+                        <table>
+                            <tr>
+                                <td>Méthode</td>
+                                <td style="font-weight: 600;">${methodLabel}</td>
+                            </tr>
+                            ${coverageResult.tracedPoints ? `
+                            <tr>
+                                <td>Points tracés</td>
+                                <td>${coverageResult.tracedPoints}</td>
+                            </tr>
+                            ` : ''}
+                            <tr>
+                                <td>Tables entières</td>
+                                <td>${countFull}</td>
+                            </tr>
+                            <tr>
+                                <td>Demi-tables</td>
+                                <td>${countHalf}</td>
+                            </tr>
+                            <tr>
+                                <td>Surface panneaux</td>
+                                <td>${totalPanelArea.toFixed(0)} m²</td>
+                            </tr>
+                            <tr>
+                                <td>Surface enveloppe</td>
+                                <td>${hullAreaM2.toFixed(0)} m²</td>
+                            </tr>
+                            <tr>
+                                <td>Taux</td>
+                                <td style="font-weight: 600; color: #10b981;">${tauxRecouvrement.toFixed(1)}%</td>
+                            </tr>
+                        </table>
+                    </div>
+                `);
+                
+                this.resultLayer.addLayer(hullLayer);
+            }
 
-			document.getElementById('stat-coverage').textContent = tauxRecouvrement.toFixed(1) + '%';
-		} else {
-			// Si le calcul n'est pas demandé, afficher "non calculé"
-			document.getElementById('stat-coverage').textContent = 'non calculé';
-			document.getElementById('stat-coverage').style.color = 'var(--text-secondary)';
-		}
+            document.getElementById('stat-coverage').textContent = tauxRecouvrement.toFixed(1) + '%';
+        } else {
+            // Si le calcul n'est pas demandé, afficher "non calculé"
+            document.getElementById('stat-coverage').textContent = 'non calculé';
+            document.getElementById('stat-coverage').style.color = 'var(--text-secondary)';
+        }
 
-		document.getElementById('calepinage-stats').style.display = 'block';
-	},
+        document.getElementById('calepinage-stats').style.display = 'block';
+    },
 
     /**
      * Clear results

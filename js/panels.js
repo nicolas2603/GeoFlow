@@ -32,10 +32,10 @@ const GeoflowPanels = {
             }
         }
 
-        if (GeoflowConfig.isFeatureEnabled('enr')) {
-            const btnEnr = document.getElementById('btn-enr');
+        if (GeoflowConfig.isFeatureEnabled('metier')) {
+            const btnEnr = document.getElementById('btn-metier');
             if (btnEnr) {
-                btnEnr.addEventListener('click', () => this.showPanel('enr'));
+                btnEnr.addEventListener('click', () => this.showPanel('metier'));
             }
         }
 
@@ -120,10 +120,10 @@ const GeoflowPanels = {
                 content.innerHTML = GeoflowMeasure.getPanelContent();
                 GeoflowMeasure.attachListeners();
                 break;
-            case 'enr':
-                title.textContent = 'Applications métier';
-                content.innerHTML = GeoflowEnr.getPanelContent();
-                GeoflowEnr.attachListeners();
+            case 'metier':
+                title.textContent = 'Applications métiers';
+                content.innerHTML = GeoflowMetier.getPanelContent();
+                GeoflowMetier.attachListeners();
                 break;
             case 'tools':
                 title.textContent = 'Outils';
