@@ -925,6 +925,10 @@
     display: none;
 }
 
+.type-card.disabled {
+    cursor: not-allowed;
+}
+
 /* Print Preview Modal */
 .print-preview-modal {
     position: fixed;

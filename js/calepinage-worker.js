@@ -14,7 +14,11 @@ self.onmessage = function(e) {
     
     switch(type) {
         case 'OPTIMIZE':
-            optimizeLayout(data);
+            if (data.config && data.config.mode === 'plantation') {
+                optimizePlantationGrid(data);
+            } else {
+                optimizeLayout(data);
+            }
             break;
             
         default:
@@ -78,12 +82,12 @@ function optimizeLayout(data) {
         const panelLatSize = panelH / metersPerDegreeLat;
         const panelLngSize = panelW / metersPerDegreeLng;
 
-        console.log(`Mode ${isVertical ? 'TRACKER' : 'STANDARD'}:`, {
+        /* console.log(`Mode ${isVertical ? 'TRACKER' : 'STANDARD'}:`, {
             panelW, panelH,
             hSpacingToUse, vSpacingToUse,
             axialStepLen: axialStepLen * metersPerDegreeLng,
             stepPerp: stepPerp * metersPerDegreeLat
-        });
+        }); */
 
         // Optimization loop
         const anchorModes = ['bottom_left', 'bottom_right', 'top_left', 'top_right'];
@@ -390,6 +394,226 @@ function fillWithOffsets(buffered, minLat, maxLat, minLng, maxLng,
                 }
             }
         }
+    }
+    
+    return panels;
+}
+
+/**
+ * Optimize plantation grid (similar to solar tracker optimization)
+ * Tests 400 configurations to maximize tree count
+ */
+function optimizePlantationGrid(data) {
+    const { polygon, config } = data;
+    
+    try {
+        postProgress(0, 'Initialisation de la grille...');
+        
+        // Apply buffer
+        let buffered = turf.buffer(polygon, -config.edgeMargin / 1000, {units: 'kilometers'});
+        
+        if (!buffered || buffered.geometry.type === 'GeometryCollection') {
+            const polys = buffered.geometry.geometries.filter(g => g.type === 'Polygon');
+            if (polys.length === 0) {
+                postResult({ panels: [], error: 'Buffer vide' });
+                return;
+            }
+            buffered = turf.polygon(polys[0].coordinates);
+        }
+
+        // Get bounding box
+        const bbox = turf.bbox(buffered);
+        const [minLng, minLat, maxLng, maxLat] = bbox;
+
+        // Tree dimensions (always square for plantation)
+        const treeDiameter = config.panelWidth; // panelWidth = panelLength = diameter
+        
+        // Conversion factors
+        const latCenter = (minLat + maxLat) / 2;
+        const metersPerDegreeLat = 111320;
+        const metersPerDegreeLng = 111320 * Math.cos(latCenter * Math.PI / 180);
+
+        // Grid spacing (tree diameter + spacing)
+        const gridStepLng = (treeDiameter + config.hSpacing) / metersPerDegreeLng;
+        const gridStepLat = (treeDiameter + config.vSpacing) / metersPerDegreeLat;
+        
+        // Tree size in degrees
+        const treeSizeLat = treeDiameter / metersPerDegreeLat;
+        const treeSizeLng = treeDiameter / metersPerDegreeLng;
+
+        postProgress(5, 'Optimisation de la grille...');
+
+        // Optimization: test 4 anchors × 10 row offsets × 10 col offsets = 400 configs
+        const anchorModes = ['bottom_left', 'bottom_right', 'top_left', 'top_right'];
+        const optimizationSteps = 10;
+        const totalConfigs = anchorModes.length * optimizationSteps * optimizationSteps;
+        
+        let bestPanels = [];
+        let bestConfig = null;
+        let configIndex = 0;
+
+        for (const anchor of anchorModes) {
+            for (let i = 0; i < optimizationSteps; i++) {
+                const rowOffset = (i / optimizationSteps) * gridStepLat;
+                
+                for (let j = 0; j < optimizationSteps; j++) {
+                    const colOffset = (j / optimizationSteps) * gridStepLng;
+                    
+                    // Generate grid with this configuration
+                    const testPanels = fillPlantationGrid(
+                        buffered,
+                        minLat, maxLat, minLng, maxLng,
+                        gridStepLat, gridStepLng,
+                        treeSizeLat, treeSizeLng,
+                        rowOffset, colOffset,
+                        anchor
+                    );
+                    
+                    if (testPanels.length > bestPanels.length) {
+                        bestPanels = testPanels;
+                        bestConfig = { 
+                            anchor, 
+                            rowOffset, 
+                            colOffset, 
+                            count: testPanels.length 
+                        };
+                    }
+                    
+                    configIndex++;
+                    
+                    // Update progress every 10 configs
+                    if (configIndex % 10 === 0) {
+                        const progress = 5 + (configIndex / totalConfigs) * 90;
+                        postProgress(progress, `${configIndex}/${totalConfigs} configs testées`);
+                    }
+                }
+            }
+        }
+
+        postProgress(100, 'Terminé !');
+        
+        postResult({
+            panels: bestPanels,
+            bestConfig: bestConfig,
+            totalTested: totalConfigs
+        });
+
+    } catch (error) {
+        postResult({ 
+            panels: [], 
+            error: error.message,
+            stack: error.stack 
+        });
+    }
+}
+
+/**
+ * Fill plantation grid with specific offsets and anchor mode
+ */
+function fillPlantationGrid(buffered, minLat, maxLat, minLng, maxLng, 
+                            gridStepLat, gridStepLng, 
+                            treeSizeLat, treeSizeLng,
+                            rowOffset, colOffset, anchor) {
+    const panels = [];
+    
+    // Determine starting positions based on anchor
+    let startLat, endLat, latDirection;
+    let startLng, endLng, lngDirection;
+    
+    switch(anchor) {
+        case 'bottom_left':
+            startLat = minLat + rowOffset;
+            endLat = maxLat;
+            latDirection = 1;
+            startLng = minLng + colOffset;
+            endLng = maxLng;
+            lngDirection = 1;
+            break;
+            
+        case 'bottom_right':
+            startLat = minLat + rowOffset;
+            endLat = maxLat;
+            latDirection = 1;
+            startLng = maxLng - colOffset - treeSizeLng;
+            endLng = minLng;
+            lngDirection = -1;
+            break;
+            
+        case 'top_left':
+            startLat = maxLat - rowOffset - treeSizeLat;
+            endLat = minLat;
+            latDirection = -1;
+            startLng = minLng + colOffset;
+            endLng = maxLng;
+            lngDirection = 1;
+            break;
+            
+        case 'top_right':
+            startLat = maxLat - rowOffset - treeSizeLat;
+            endLat = minLat;
+            latDirection = -1;
+            startLng = maxLng - colOffset - treeSizeLng;
+            endLng = minLng;
+            lngDirection = -1;
+            break;
+    }
+    
+    let row = 0;
+    
+    // Fill grid from starting position
+    for (let lat = startLat; 
+         latDirection > 0 ? (lat + treeSizeLat <= endLat) : (lat >= endLat); 
+         lat += latDirection * gridStepLat) {
+        
+        let col = 0;
+        
+        for (let lng = startLng;
+             lngDirection > 0 ? (lng + treeSizeLng <= endLng) : (lng >= endLng);
+             lng += lngDirection * gridStepLng) {
+            
+            // Calculate tree center
+            const centerLat = lat + treeSizeLat / 2;
+            const centerLng = lng + treeSizeLng / 2;
+            
+            // Create square representing tree crown
+            const treeSquare = turf.polygon([[
+                [lng, lat],
+                [lng, lat + treeSizeLat],
+                [lng + treeSizeLng, lat + treeSizeLat],
+                [lng + treeSizeLng, lat],
+                [lng, lat]
+            ]]);
+            
+            // Check if tree is fully contained in buffered polygon
+            try {
+                const contained = turf.booleanContains(buffered, treeSquare);
+                if (contained) {
+                    // Additional check with intersection area
+                    const intersection = turf.intersect(treeSquare, buffered);
+                    if (intersection) {
+                        const treeArea = turf.area(treeSquare);
+                        const intersectionArea = turf.area(intersection);
+                        const ratio = intersectionArea / treeArea;
+                        
+                        if (ratio > 0.99) {
+                            panels.push({
+                                geometry: treeSquare,
+                                type: 'full',
+                                center: [centerLng, centerLat],
+                                row: row,
+                                col: col
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore trees that cause errors
+            }
+            
+            col++;
+        }
+        
+        row++;
     }
     
     return panels;

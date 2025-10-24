@@ -1,96 +1,135 @@
 /**
- * Geoflow Coverage Tracing Module
+ * Geoflow Coverage Tracing Web Worker
  * Port of QGIS SolarPanelGenerator tracing_logic.py
- * SOLUTION: Generate segments correctly (iterative), then assemble smartly
+ * Runs in background thread for performance
  */
 
-const GeoflowCoverageTracing = {
+// Import Turf.js in worker context
+self.importScripts('https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js');
+
+/**
+ * Main message handler
+ */
+self.onmessage = function(e) {
+    const { type, data } = e.data;
     
-    toleranceBuffer: 0.1,
-    maxIterations: 10000,
-    DEBUG_MODE: false,
-    debugLayer: null,
-    debugMap: null,
-    state: null,
+    switch(type) {
+        case 'TRACE_BOUNDARY':
+            traceBoundary(data);
+            break;
+            
+        default:
+            console.warn('Unknown worker message type:', type);
+    }
+};
+
+/**
+ * Main tracing function - called by worker
+ */
+function traceBoundary(data) {
+    const { panels, hSpacing, vSpacing, orientation } = data;
     
-    enableDebug(map, layer) {
-        this.DEBUG_MODE = true;
-        this.debugMap = map;
-        this.debugLayer = layer;
-        console.log('🛠️ DEBUG MODE ENABLED');
-    },
-    
-    disableDebug() {
-        this.DEBUG_MODE = false;
-    },
-    
-    /**
-     * Main entry point
-     */
-    traceCoverageBoundary(panels, hSpacing, vSpacing, orientation) {
-        try {
-            //console.log(`🎯 Starting coverage tracing: ${panels.length} panels`);
-            const startTime = performance.now();
-            
-            this.resetState();
-            
-            const tolX = hSpacing + this.toleranceBuffer;
-            const tolY = vSpacing + this.toleranceBuffer;
-            const isTracker = Math.abs((orientation % 180) - 90) < 1e-6;
-            
-            this.tolerance = {
-                x: isTracker ? tolY : tolX,
-                y: isTracker ? tolX : tolY
-            };
-            this.isTracker = isTracker;
-            
-            //console.log(`📏 Tolerances: X=${this.tolerance.x.toFixed(3)}m, Y=${this.tolerance.y.toFixed(3)}m`);
-            
-            const preparedPanels = this.preparePanels(panels, isTracker);
-            if (preparedPanels.length === 0) return null;
-            
-            const rows = this.organizePanelsIntoRows(preparedPanels);
-            //console.log(`📊 Organized into ${rows.length} rows`);
-            
-            const panelPositions = new Map();
-            rows.forEach((row, i) => {
-                row.forEach((panel, j) => {
-                    panelPositions.set(panel.id, { row: i, col: j });
-                });
-            });
-            
-            const firstPanel = rows[0][0];
-            const startPoint = this.getStartingPoint(firstPanel, isTracker);
-            
-            //console.log(`🚀 Starting from panel ${firstPanel.id} and point ${startPoint}`);
-            
-            this.generateSegmentsIterative(firstPanel, startPoint, rows, panelPositions);
-            
-            //console.log(`📦 Generated ${this.state.segments.length} segments`);
-            
-            if (this.state.segments.length === 0) {
-                console.error('❌ NO SEGMENTS GENERATED');
-                return null;
-            }
-            
-            const assembledPoints = this.assembleSegmentsSmartly(startPoint);
-            
-            //this.exportSegmentsToGeoJSON();
-            
-            if (!assembledPoints || assembledPoints.length < 3) {
-                console.warn('Failed to assemble valid polygon');
-                return null;
-            }
-            
-            const duration = ((performance.now() - startTime) / 1000).toFixed(2);
-            
-            return assembledPoints;
-            
-        } catch (error) {
-            console.error('❌ Error in coverage tracing:', error);
-            return null;
+    try {
+        // Send progress update
+        postProgress(0, 'Initialisation du traçage...');
+        
+        const tracer = new CoverageTracer();
+        
+        // Configure tracer
+        const tolX = hSpacing + tracer.toleranceBuffer;
+        const tolY = vSpacing + tracer.toleranceBuffer;
+        const isTracker = Math.abs((orientation % 180) - 90) < 1e-6;
+        
+        tracer.tolerance = {
+            x: isTracker ? tolY : tolX,
+            y: isTracker ? tolX : tolY
+        };
+        tracer.isTracker = isTracker;
+        
+        postProgress(10, 'Préparation des panneaux...');
+        
+        // Prepare panels
+        const preparedPanels = tracer.preparePanels(panels, isTracker);
+        if (preparedPanels.length === 0) {
+            postResult({ success: false, error: 'Aucun panneau à tracer' });
+            return;
         }
-    },
+        
+        postProgress(20, 'Organisation en lignes...');
+        
+        // Organize into rows
+        const rows = tracer.organizePanelsIntoRows(preparedPanels);
+        
+        // Create panel positions map
+        const panelPositions = new Map();
+        rows.forEach((row, i) => {
+            row.forEach((panel, j) => {
+                panelPositions.set(panel.id, { row: i, col: j });
+            });
+        });
+        
+        postProgress(30, 'Démarrage du traçage...');
+        
+        // Get starting point
+        const firstPanel = rows[0][0];
+        const startPoint = tracer.getStartingPoint(firstPanel, isTracker);
+        
+        // Generate segments iteratively
+        tracer.generateSegmentsIterative(firstPanel, startPoint, rows, panelPositions);
+        
+        postProgress(80, 'Assemblage des segments...');
+        
+        if (tracer.state.segments.length === 0) {
+            postResult({ success: false, error: 'Aucun segment généré' });
+            return;
+        }
+        
+        // Assemble segments into boundary
+        const boundaryPoints = tracer.assembleSegmentsSmartly(startPoint);
+        
+        if (!boundaryPoints || boundaryPoints.length < 3) {
+            postResult({ success: false, error: 'Impossible d\'assembler le polygone' });
+            return;
+        }
+        
+        postProgress(90, 'Calcul des surfaces...');
+        
+        // Create boundary polygon
+        const boundaryPolygon = turf.polygon([boundaryPoints]);
+        const hullArea = turf.area(boundaryPolygon);
+        
+        postProgress(100, 'Terminé !');
+        
+        // Send result
+        postResult({
+            success: true,
+            boundaryPoints: boundaryPoints,
+            boundaryPolygon: boundaryPolygon,
+            hullArea: hullArea,
+            segmentCount: tracer.state.segments.length,
+            method: 'exact_tracing'
+        });
+        
+    } catch (error) {
+        postResult({ 
+            success: false, 
+            error: error.message,
+            stack: error.stack 
+        });
+    }
+}
+
+/**
+ * Coverage Tracer Class - encapsulates all tracing logic
+ */
+class CoverageTracer {
+    constructor() {
+        this.toleranceBuffer = 0.1;
+        this.maxIterations = 10000;
+        this.tolerance = null;
+        this.isTracker = false;
+        this.resetState();
+    }
     
     resetState() {
         this.state = {
@@ -103,7 +142,7 @@ const GeoflowCoverageTracing = {
             iterations: 0,
             callStack: []
         };
-    },
+    }
     
     generateSegmentsIterative(firstPanel, startPoint, rows, panelPositions) {
         this.state.callStack = [];
@@ -116,10 +155,14 @@ const GeoflowCoverageTracing = {
                 break;
             }
             
+            // Update progress periodically
+            if (this.state.iterations % 1000 === 0) {
+                const progress = 30 + (this.state.iterations / this.maxIterations) * 50;
+                postProgress(progress, `Traçage: ${this.state.segments.length} segments`);
+            }
+            
             const call = this.state.callStack.pop();
             const [method, ...args] = call;
-            
-            //console.log('Method:', method, 'args:', args);
             
             switch(method) {
                 case 'tracer_recouvrement': this._tracerRecouvrement(...args); break;
@@ -134,15 +177,12 @@ const GeoflowCoverageTracing = {
                 case 'calcul_projection': this._calculProjection(...args); break;
             }
         }
-    },
+    }
     
     _addCall(method, ...args) {
         this.state.callStack.push([method, ...args]);
-    },
+    }
     
-    /**
-     * SMART ASSEMBLY using graph traversal
-     */
     assembleSegmentsSmartly(forcedStartPoint = null) {
         const segments = this.state.segments;
         
@@ -182,8 +222,6 @@ const GeoflowCoverageTracing = {
             startKey = this._pointKey(startPoint);
         }
         
-        //console.log(`🚦 Starting assembly from [${startPoint[0].toFixed(6)}, ${startPoint[1].toFixed(6)}]`);
-        
         // Traverse graph
         const path = [[...startPoint]];
         const usedSegments = new Set();
@@ -207,7 +245,6 @@ const GeoflowCoverageTracing = {
             if (!nextEdge) {
                 for (const seg of segments) {
                     if (!usedSegments.has(seg.id)) {
-                        //console.warn(`⚠️ Gap at iteration ${iterations}, jumping to segment ${seg.id}`);
                         path.push([...seg.p1]);
                         path.push([...seg.p2]);
                         usedSegments.add(seg.id);
@@ -233,57 +270,16 @@ const GeoflowCoverageTracing = {
             }
         }
         
-        //console.log(`✅ Assembled ${path.length} points (${usedSegments.size}/${segments.length} segments)`);
-        
         return path;
-    },
-    
-    exportSegmentsToGeoJSON() {
-        if (!this.state || !this.state.segments || this.state.segments.length === 0) {
-            console.warn('⚠️ Aucun segment à exporter');
-            return null;
-        }
-
-        const features = this.state.segments.map(seg => ({
-            type: 'Feature',
-            geometry: {
-                type: 'LineString',
-                coordinates: [seg.p1, seg.p2],
-            },
-            properties: {
-                id: seg.id,
-                note: seg.note || '',
-                order: seg.order || 0,
-            },
-        }));
-
-        const geojson = {
-            type: 'FeatureCollection',
-            features: features,
-        };
-
-        const blob = new Blob([JSON.stringify(geojson, null, 2)], {
-            type: 'application/geo+json',
-        });
-        const url = URL.createObjectURL(blob);
-
-        // Force download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'coverage_segments_debug.geojson';
-        a.click();
-
-        console.log(`💾 Exported ${features.length} segments to coverage_segments_debug.geojson`);
-        return geojson;
-    },
+    }
     
     _pointKey(point) {
         return `${point[0].toFixed(9)},${point[1].toFixed(9)}`;
-    },
+    }
     
     _pointsEqual(p1, p2) {
         return Math.abs(p1[0] - p2[0]) < 1e-9 && Math.abs(p1[1] - p2[1]) < 1e-9;
-    },
+    }
     
     addSegment(p1, p2, note) {
         if (Math.abs(p1[0] - p2[0]) < 1e-10 && Math.abs(p1[1] - p2[1]) < 1e-10) return;
@@ -303,30 +299,10 @@ const GeoflowCoverageTracing = {
             order: this.state.segmentId
         });
         
-        if (this.DEBUG_MODE && this.debugMap && this.debugLayer) {
-            this.visualizeSegment(p1, p2, note);
-        }
-        
         this.state.segmentId++;
-    },
+    }
     
-    visualizeSegment(p1, p2, note) {
-        const colors = {
-            'Bord droite': '#ef4444', 'Bord gauche': '#3b82f6', 'Bord haut': '#10b981', 'Bord bas': '#f59e0b',
-            'Liaison droite': '#8b5cf6', 'Liaison gauche': '#ec4899', 'Liaison haute': '#14b8a6', 'Liaison basse': '#f97316',
-            'Liaison haute alternative 1': '#a855f7', 'Liaison haute alternative 2': '#c026d3',
-            'Liaison basse alternative 1': '#fb923c', 'Liaison basse alternative 2': '#fbbf24',
-            'Bord haut alternatif 1': '#4ade80', 'Bord haut alternatif 2': '#22c55e',
-            'Bord bas alternatif 1': '#fb7185', 'Bord bas alternatif 2': '#f43f5e'
-        };
-        
-        const line = L.polyline([[p1[1], p1[0]], [p2[1], p2[0]]], {
-            color: colors[note] || '#6b7280', weight: 3, opacity: 0.8
-        });
-        
-        line.bindPopup(`<div style="font-size: 0.75rem;"><b>Segment ${this.state.segmentId}</b><br><span style="color: ${colors[note] || '#6b7280'};">● ${note}</span></div>`);
-        this.debugLayer.addLayer(line);
-    },
+    // === All the tracing methods from original code ===
     
     _tracerRecouvrement(panel, coin, rows, panelPositions, forcer) {
         const origin = this.state.context.origin;
@@ -358,7 +334,7 @@ const GeoflowCoverageTracing = {
             this.state.context.origin = null;
             this._addCall('panneau_a_gauche', panel, rows, panelPositions);
         }
-    },
+    }
     
     _panneauADroite(panel, rows, panelPositions) {
         const coords = panel.coords;
@@ -380,7 +356,7 @@ const GeoflowCoverageTracing = {
         this.state.context.origin = "panneau_a_droite_ko";
         const coin = this.bordDroite(panel);
         this._addCall('tracer_recouvrement', panel, coin, rows, panelPositions, false);
-    },
+    }
     
     _panneauAuDessus(panel, rows, panelPositions) {
         const coords = panel.coords;
@@ -409,7 +385,7 @@ const GeoflowCoverageTracing = {
         
         this.state.context.origin = "panneau_au_dessus_ko";
         this._addCall('tracer_recouvrement', panel, topLeft, rows, panelPositions, true);
-    },
+    }
     
     _panneauEnDessous(panel, rows, panelPositions) {
         const coords = panel.coords;
@@ -439,7 +415,7 @@ const GeoflowCoverageTracing = {
         
         this.state.context.origin = "panneau_en_dessous_ko";
         this._addCall('tracer_recouvrement', panel, bottomRight, rows, panelPositions, true);
-    },
+    }
     
     _panneauAGauche(panel, rows, panelPositions) {
         const coords = panel.coords;
@@ -464,7 +440,7 @@ const GeoflowCoverageTracing = {
         const coin = this.bordGauche(panel);
         this.state.context.origin = "panneau_a_gauche_ko";
         this._addCall('tracer_recouvrement', panel, coin, rows, panelPositions, false);
-    },
+    }
     
     _panneauProjectionHaut(panel, rows, panelPositions) {
         const coords = panel.coords;
@@ -495,7 +471,7 @@ const GeoflowCoverageTracing = {
         this.state.s = 0;
         this.state.context.origin = "panneau_projection_haut_ko";
         this._addCall('tracer_recouvrement', panel, coords[2], rows, panelPositions, false);
-    },
+    }
     
     _panneauProjectionBas(panel, rows, panelPositions) {
         const coords = panel.coords;
@@ -529,7 +505,7 @@ const GeoflowCoverageTracing = {
         if (Math.abs(Math.max(coords[2][0], coords[3][0]) - xMax) < 0.1) this.state.s = 1;
         this.state.context.origin = 'panneau_projection_bas_ko';
         this._addCall('tracer_recouvrement', panel, coin, rows, panelPositions, false);
-    },
+    }
     
     _panneauSens1(panel, rows, panelPositions) {
         if (this.state.s === 0) {
@@ -538,7 +514,7 @@ const GeoflowCoverageTracing = {
             this.bordDroite(panel);
             this._addCall('panneau_en_dessous', panel, rows, panelPositions);
         }
-    },
+    }
     
     _panneauSens2(panel, rows, panelPositions) {
         if (this.state.s === 0 && !this.isTracker) {
@@ -547,7 +523,7 @@ const GeoflowCoverageTracing = {
         } else {
             this._addCall('panneau_a_gauche', panel, rows, panelPositions);
         }
-    },
+    }
     
     _calculProjection(panel, rows, panelPositions, targetPanel) {
         const coords = panel.coords;
@@ -606,55 +582,55 @@ const GeoflowCoverageTracing = {
                 return;
             }
         }
-    },
+    }
     
     chevauchementSurX(x1, x2, x1Target, x2Target) {
         return Math.max(x1, x1Target) <= Math.min(x2, x2Target);
-    },
+    }
     
     bordDroite(panel) {
         const coords = panel.coords;
         this.addSegment(coords[2], coords[3], "Bord droite");
         return coords[3];
-    },
+    }
     
     bordGauche(panel) {
         const coords = panel.coords;
         this.addSegment(coords[0], coords[1], "Bord gauche");
         return coords[1];
-    },
+    }
     
     bordHaut(panel) {
         const coords = panel.coords;
         this.addSegment(coords[1], coords[2], "Bord haut");
         return coords[2];
-    },
+    }
     
     bordBas(panel) {
         const coords = panel.coords;
         this.addSegment(coords[3], coords[0], "Bord bas");
         return coords[0];
-    },
+    }
     
     liaisonDroite(panel1, panel2) {
         this.addSegment(panel1.coords[2], panel2.coords[1], "Liaison droite");
         return panel2.coords[1];
-    },
+    }
     
     liaisonGauche(panel1, panel2) {
         this.addSegment(panel1.coords[0], panel2.coords[3], "Liaison gauche");
         return panel2.coords[3];
-    },
+    }
     
     liaisonBasse(panel1, panel2) {
         this.addSegment(panel1.coords[3], panel2.coords[2], "Liaison basse");
         return panel2.coords[2];
-    },
+    }
     
     liaisonHaute(panel1, panel2) {
         this.addSegment(panel1.coords[1], panel2.coords[0], "Liaison haute");
         return panel2.coords[0];
-    },
+    }
     
     preparePanels(panels, isTracker) {
         return panels.map((panel, index) => {
@@ -679,7 +655,7 @@ const GeoflowCoverageTracing = {
                 originalPanel: panel
             };
         });
-    },
+    }
     
     organizePanelsIntoRows(panels) {
         const rows = [];
@@ -713,7 +689,7 @@ const GeoflowCoverageTracing = {
         }
         
         return rows;
-    },
+    }
     
     getStartingPoint(panel, isTracker) {
         const coords = panel.coords;
@@ -734,4 +710,25 @@ const GeoflowCoverageTracing = {
             }, coords[0]);
         }
     }
-};
+}
+
+/**
+ * Send progress update to main thread
+ */
+function postProgress(percent, message) {
+    self.postMessage({
+        type: 'PROGRESS',
+        progress: percent,
+        message: message
+    });
+}
+
+/**
+ * Send final result to main thread
+ */
+function postResult(result) {
+    self.postMessage({
+        type: 'RESULT',
+        ...result
+    });
+}
