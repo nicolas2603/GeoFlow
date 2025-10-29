@@ -58,7 +58,7 @@
     width: 320px;
     max-height: calc(100vh - 40px);
     background: var(--surface);
-    border-radius: 12px;
+    border-radius: 8px;
     box-shadow: 0 8px 32px var(--shadow-lg);
     backdrop-filter: blur(20px);
     transform: translateX(calc(-100% - 40px));
@@ -867,6 +867,33 @@
     cursor: pointer;
     flex-shrink: 0;
     pointer-events: none;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--surface);
+    transition: all 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.layer-checkbox:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Dark mode for layer-checkbox */
+[data-theme="dark"] .layer-checkbox {
+    background: var(--hover-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .layer-checkbox:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
 }
 
 .layer-name {
