@@ -81,14 +81,6 @@ const GeoflowLayers = {
 
             <div class="stats">
                 <div class="stat-card">
-                    <div class="stat-label">Zoom</div>
-                    <div class="stat-value" id="stat-zoom">${GeoflowMap.map.getZoom()}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Éléments</div>
-                    <div class="stat-value" id="stat-features">0</div>
-                </div>
-                <div class="stat-card">
                     <div class="stat-label">Latitude</div>
                     <div class="stat-value" id="stat-lat">${GeoflowMap.map.getCenter().lat.toFixed(4)}</div>
                 </div>
@@ -161,7 +153,6 @@ const GeoflowLayers = {
                 item.classList.toggle('active', checkbox.checked);
                 
                 this.toggleLayer(layerId, checkbox.checked);
-                this.updateStats();
                 this.updateLegendWidget();
             });
         });
@@ -250,7 +241,6 @@ const GeoflowLayers = {
         });
 
         GeoflowUtils.showToast(`${points.length} points chargés`, 'success');
-        this.updateStats();
     },
 
     /**
@@ -291,17 +281,5 @@ const GeoflowLayers = {
 		if (typeof GeoflowLegend !== 'undefined') {
 			GeoflowLegend.requestUpdate();
 		}
-	},
-
-    /**
-     * Update feature count statistics
-     */
-    updateStats() {
-        const statFeatures = document.getElementById('stat-features');
-        if (statFeatures) {
-            const count = this.markerClusters.getLayers().length + 
-                         Object.keys(this.overlayLayers).length;
-            statFeatures.textContent = count;
-        }
-    }
+	}
 };

@@ -172,11 +172,9 @@ const GeoflowMap = {
      * Update map statistics
      */
     updateStats() {
-        const statZoom = document.getElementById('stat-zoom');
         const statLat = document.getElementById('stat-lat');
         const statLng = document.getElementById('stat-lng');
 
-        if (statZoom) statZoom.textContent = this.map.getZoom();
         if (statLat) statLat.textContent = this.map.getCenter().lat.toFixed(4);
         if (statLng) statLng.textContent = this.map.getCenter().lng.toFixed(4);
     }
