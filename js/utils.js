@@ -101,19 +101,6 @@ const GeoflowUtils = {
     },
 
     /**
-     * Copy text to clipboard
-     * @param {string} text - Text to copy
-     */
-    copyToClipboard(text) {
-        const input = document.createElement('input');
-        input.value = text;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-    },
-
-    /**
      * Calculate length of a polyline
      * @param {Array} latlngs - Array of lat/lng coordinates
      * @returns {number} Length in meters

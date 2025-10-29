@@ -58,6 +58,10 @@ const GeoflowApp = {
         // Hide loading screen
         setTimeout(() => {
             GeoflowUtils.hideLoading();
+            
+            if (typeof GeoflowShare !== 'undefined') {
+                GeoflowShare.applySharedContext();
+            }
         }, 300);
 
         console.log('✅ Geoflow initialized successfully');

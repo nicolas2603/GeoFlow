@@ -13,29 +13,25 @@ const GeoflowTools = {
         
         return `
             <div class="tool-grid">
-                <div class="tool-card" data-tool="theme" id="theme-toggle">
-                    <i class="fa-solid fa-${isDark ? 'sun' : 'moon'}"></i>
-                    <div class="tool-card-label">${isDark ? 'Clair' : 'Sombre'}</div>
-                </div>
-                <div class="tool-card" data-tool="screenshot">
-                    <i class="fa-solid fa-camera"></i>
-                    <div class="tool-card-label">Capture</div>
-                </div>
-                <div class="tool-card" data-tool="help">
-                    <i class="fa-solid fa-circle-question"></i>
-                    <div class="tool-card-label">Aide</div>
-                </div>
                 <div class="tool-card" data-tool="share">
                     <i class="fa-solid fa-share-nodes"></i>
                     <div class="tool-card-label">Partager</div>
                 </div>
                 <div class="tool-card" data-tool="export">
-                    <i class="fa-solid fa-download"></i>
-                    <div class="tool-card-label">Export</div>
+                    <i class="fa-solid fa-image"></i>
+                    <div class="tool-card-label">Exporter</div>
                 </div>
                 <div class="tool-card" data-tool="print">
                     <i class="fa-solid fa-print"></i>
                     <div class="tool-card-label">Imprimer</div>
+                </div>
+				<div class="tool-card" data-tool="theme" id="theme-toggle">
+                    <i class="fa-solid fa-${isDark ? 'sun' : 'moon'}"></i>
+                    <div class="tool-card-label">${isDark ? 'Clair' : 'Sombre'}</div>
+                </div>
+                <div class="tool-card" data-tool="help">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <div class="tool-card-label">Aide</div>
                 </div>
             </div>
 
@@ -73,7 +69,6 @@ const GeoflowTools = {
         switch(tool) {
             case 'theme':
                 const newTheme = GeoflowUtils.toggleTheme();
-                // Refresh panel content to update icon
                 if (GeoflowPanels.currentPanel === 'tools') {
                     const content = document.getElementById('panel-content');
                     content.innerHTML = this.getPanelContent();
@@ -84,19 +79,13 @@ const GeoflowTools = {
                 GeoflowUtils.showToast('Utilisez Ctrl+Shift+S pour capturer', 'info');
                 break;
             case 'share':
-                GeoflowUtils.copyToClipboard(window.location.href);
-                GeoflowUtils.showToast('Lien copié', 'success');
+                GeoflowPanels.showPanel('share', 'tools');
                 break;
             case 'print':
-                // Pass 'tools' as parent panel for automatic sub-panel registration
                 GeoflowPanels.showPanel('print', 'tools');
                 break;
             case 'export':
-                if (GeoflowConfig.isFeatureEnabled('draw')) {
-                    GeoflowDraw.exportGeoJSON();
-                } else {
-                    GeoflowUtils.showToast('Fonctionnalité de dessin désactivée', 'warning');
-                }
+                GeoflowPanels.showPanel('export', 'tools');
                 break;
             case 'help':
                 GeoflowUtils.showToast('Documentation : docs.geoflow.io', 'info');

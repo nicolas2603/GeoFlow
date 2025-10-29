@@ -189,6 +189,11 @@ const GeoflowPanels = {
                 content.innerHTML = GeoflowMetier.getPanelContent();
                 GeoflowMetier.attachListeners();
                 break;
+            case 'calepinage':
+                title.textContent = 'Calepinage';
+                content.innerHTML = GeoflowCalepinage.getPanelContent();
+                GeoflowCalepinage.attachListeners();
+                break;
             case 'tools':
                 title.textContent = 'Outils';
                 content.innerHTML = GeoflowTools.getPanelContent();
@@ -199,10 +204,15 @@ const GeoflowPanels = {
                 content.innerHTML = GeoflowPrint.getPanelContent();
                 GeoflowPrint.attachListeners();
                 break;
-            case 'calepinage':
-                title.textContent = 'Calepinage';
-                content.innerHTML = GeoflowCalepinage.getPanelContent();
-                GeoflowCalepinage.attachListeners();
+            case 'export':
+                title.textContent = 'Exporter';
+                content.innerHTML = GeoflowExport.getPanelContent();
+                GeoflowExport.attachListeners();
+                break;
+            case 'share':
+                title.textContent = 'Partager';
+                content.innerHTML = GeoflowShare.getPanelContent();
+                GeoflowShare.attachListeners();
                 break;
             default:
                 // Try to load dynamically if module exists
