@@ -274,19 +274,19 @@ const GeoflowCalepinage = {
 
             <!-- Options -->
             <div style="margin-bottom: 14px;">
-                <div class="form-check" style="padding-left: 1.5rem; margin-bottom: 6px;">
+                <div class="form-check" style="margin-bottom: 6px;">
                     <input class="form-check-input" type="checkbox" id="calepinage-tracker">
                     <label class="form-check-label" for="calepinage-tracker" style="font-size: 0.85rem;">
                         <i class="fa-solid fa-rotate"></i> Orientation Nord-Sud (mode Tracker)
                     </label>
                 </div>
-                <div class="form-check" style="padding-left: 1.5rem; margin-bottom: 6px;">
+                <div class="form-check" style="margin-bottom: 6px;">
                     <input class="form-check-input" type="checkbox" id="calepinage-half">
                     <label class="form-check-label" for="calepinage-half" style="font-size: 0.85rem;">
                         <i class="fa-solid fa-scissors"></i> Autoriser les demi-tables
                     </label>
                 </div>
-                <div class="form-check" style="padding-left: 1.5rem;">
+                <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="calepinage-recouvrement">
                     <label class="form-check-label" for="calepinage-recouvrement" style="font-size: 0.85rem;">
                         <i class="fa-solid fa-calculator"></i> Calculer le recouvrement

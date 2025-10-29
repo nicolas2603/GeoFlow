@@ -5,6 +5,24 @@
 
 const GeoflowPanels = {
     currentPanel: null,
+    parentPanel: null, // Store the parent panel when in a sub-panel
+
+    /**
+     * Panel hierarchy - maps sub-panels to their parent panels
+     * This is automatically built based on which module calls showPanel
+     */
+    panelHierarchy: {
+        // Main panels (have buttons in toolbar)
+        'layers': null,
+        'draw': null,
+        'measure': null,
+        'metier': null,
+        'tools': null,
+        'legend': null,
+        
+        // Sub-panels will be dynamically registered
+        // Format: 'sub-panel-name': 'parent-panel-name'
+    },
 
     /**
      * Initialize panel controls
@@ -64,14 +82,47 @@ const GeoflowPanels = {
     },
 
     /**
-     * Show a specific panel
-     * @param {string} type - Panel type (layers, draw, measure, tools)
+     * Register a sub-panel with its parent
+     * @param {string} subPanel - Sub-panel identifier
+     * @param {string} parentPanel - Parent panel identifier
      */
-    showPanel(type) {
+    registerSubPanel(subPanel, parentPanel) {
+        this.panelHierarchy[subPanel] = parentPanel;
+    },
+
+    /**
+     * Check if a panel is a sub-panel
+     * @param {string} type - Panel type
+     * @returns {boolean}
+     */
+    isSubPanel(type) {
+        return this.panelHierarchy[type] !== null && this.panelHierarchy[type] !== undefined;
+    },
+
+    /**
+     * Get parent panel for a sub-panel
+     * @param {string} type - Sub-panel type
+     * @returns {string|null}
+     */
+    getParentPanel(type) {
+        return this.panelHierarchy[type] || null;
+    },
+
+    /**
+     * Show a specific panel
+     * @param {string} type - Panel type (layers, draw, measure, tools, etc.)
+     * @param {string} parentPanel - Optional parent panel (for automatic sub-panel registration)
+     */
+    showPanel(type, parentPanel = null) {
         // Check if feature is enabled using GeoflowConfig method
         if (!GeoflowConfig.isFeatureEnabled(type)) {
             GeoflowUtils.showToast('Fonctionnalité désactivée', 'warning');
             return;
+        }
+
+        // Auto-register sub-panel if parentPanel is provided
+        if (parentPanel && !this.panelHierarchy.hasOwnProperty(type)) {
+            this.registerSubPanel(type, parentPanel);
         }
 
         const panel = document.getElementById('panel');
@@ -90,15 +141,28 @@ const GeoflowPanels = {
             this.cleanupCurrentPanel();
         }
 
+        // Determine if this is a sub-panel
+        const isSubPanel = this.isSubPanel(type);
+        const parentType = isSubPanel ? this.getParentPanel(type) : null;
+
         // Update button states - exclude btn-legend from being deactivated
         document.querySelectorAll('.tool-btn').forEach(b => {
             if (b.id !== 'btn-legend') {
-                b.classList.remove('active');
+                b.classList.remove('active', 'sub-active');
             }
         });
         
-        if (btn) {
+        if (isSubPanel && parentType) {
+            // Sub-panel: parent gets sub-active
+            const parentBtn = document.getElementById(`btn-${parentType}`);
+            if (parentBtn) {
+                parentBtn.classList.add('sub-active');
+            }
+            this.parentPanel = parentType;
+        } else if (btn) {
+            // Main panel: btn gets active
             btn.classList.add('active');
+            this.parentPanel = null;
         }
 
         this.currentPanel = type;
@@ -140,6 +204,19 @@ const GeoflowPanels = {
                 content.innerHTML = GeoflowCalepinage.getPanelContent();
                 GeoflowCalepinage.attachListeners();
                 break;
+            default:
+                // Try to load dynamically if module exists
+                const moduleName = 'Geoflow' + type.charAt(0).toUpperCase() + type.slice(1);
+                if (window[moduleName]) {
+                    title.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                    content.innerHTML = window[moduleName].getPanelContent();
+                    if (window[moduleName].attachListeners) {
+                        window[moduleName].attachListeners();
+                    }
+                } else {
+                    content.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">Panel non trouvé</div>';
+                }
+                break;
         }
 
         panel.classList.add('active');
@@ -154,14 +231,15 @@ const GeoflowPanels = {
         
         document.getElementById('panel').classList.remove('active');
         
-        // Remove active state from all buttons except btn-legend
+        // Remove active and sub-active state from all buttons except btn-legend
         document.querySelectorAll('.tool-btn').forEach(b => {
             if (b.id !== 'btn-legend') {
-                b.classList.remove('active');
+                b.classList.remove('active', 'sub-active');
             }
         });
         
         this.currentPanel = null;
+        this.parentPanel = null;
     },
 
     /**
@@ -241,7 +319,7 @@ const GeoflowPanels = {
      */
     toggleLegend() {
         if (typeof GeoflowLegend !== 'undefined') {
-			GeoflowLegend.toggle();
-		}
+            GeoflowLegend.toggle();
+        }
     }
 };

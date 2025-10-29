@@ -50,21 +50,21 @@ const GeoflowPrint = {
             </div>
 
             <div style="margin-bottom: 14px;">
-                <div class="form-check" style="padding-left: 1.5rem;">
-                    <input class="form-check-input" type="checkbox" id="print-legend" checked>
-                    <label class="form-check-label" for="print-legend" style="font-size: 0.85rem;">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="print-legend">
+                    <label class="form-check-label" for="print-legend">
                         Inclure la légende
                     </label>
                 </div>
-                <div class="form-check" style="padding-left: 1.5rem; margin-top: 6px;">
-                    <input class="form-check-input" type="checkbox" id="print-scale-bar" checked>
-                    <label class="form-check-label" for="print-scale-bar" style="font-size: 0.85rem;">
+                <div class="form-check" style="margin-top: 8px;">
+                    <input class="form-check-input" type="checkbox" id="print-scale-bar">
+                    <label class="form-check-label" for="print-scale-bar">
                         Inclure l'échelle graphique
                     </label>
                 </div>
-                <div class="form-check" style="padding-left: 1.5rem; margin-top: 6px;">
-                    <input class="form-check-input" type="checkbox" id="print-north-arrow" checked>
-                    <label class="form-check-label" for="print-north-arrow" style="font-size: 0.85rem;">
+                <div class="form-check" style="margin-top: 8px;">
+                    <input class="form-check-input" type="checkbox" id="print-north-arrow">
+                    <label class="form-check-label" for="print-north-arrow">
                         Inclure la flèche Nord
                     </label>
                 </div>

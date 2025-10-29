@@ -88,7 +88,8 @@ const GeoflowTools = {
                 GeoflowUtils.showToast('Lien copié', 'success');
                 break;
             case 'print':
-                GeoflowPanels.showPanel('print');
+                // Pass 'tools' as parent panel for automatic sub-panel registration
+                GeoflowPanels.showPanel('print', 'tools');
                 break;
             case 'export':
                 if (GeoflowConfig.isFeatureEnabled('draw')) {

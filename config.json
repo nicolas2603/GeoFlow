@@ -5,7 +5,8 @@
     "colors": {
       "primary": "#378ba7",
       "primaryDark": "#519cb3",
-      "primaryText": "#052d36"
+      "primaryText": "#052d36",
+      "primaryTextDark": "#f9fafb"
     },
     "logo": "assets/logo.png"
   },

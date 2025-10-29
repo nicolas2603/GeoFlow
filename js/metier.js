@@ -39,12 +39,7 @@ const GeoflowMetier = {
      * @param {string} tool - Tool identifier
      */
     handleToolAction(tool) {
-        switch(tool) {
-            case 'calepinage':
-                GeoflowPanels.showPanel('calepinage');
-                break;
-            case 'foncier':
-                GeoflowUtils.showToast('Foncier', 'info');
-                break;        }
+        // Pass 'metier' as parent panel for automatic sub-panel registration
+        GeoflowPanels.showPanel(tool, 'metier');
     }
 };

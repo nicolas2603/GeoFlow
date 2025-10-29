@@ -47,7 +47,7 @@ const GeoflowApp = {
 
         GeoflowBasemap.init();
         GeoflowPanels.init();
-		GeoflowLegend.init();
+        GeoflowLegend.init();
 
         // Setup action buttons
         this.initActionButtons();
@@ -106,56 +106,49 @@ const GeoflowApp = {
             return;
         }
 
-        const root = document.documentElement;
         const colors = GeoflowConfig.theme.colors;
 
-        // Apply primary color (light mode)
+        // Create or get style element for custom theme
+        let themeStyle = document.getElementById('geoflow-custom-theme');
+        if (!themeStyle) {
+            themeStyle = document.createElement('style');
+            themeStyle.id = 'geoflow-custom-theme';
+            document.head.appendChild(themeStyle);
+        }
+
+        // Build CSS rules
+        let cssRules = ':root {\n';
+        
+        // Light mode colors
         if (colors.primary) {
-            root.style.setProperty('--primary', colors.primary);
+            cssRules += `  --primary: ${colors.primary};\n`;
         }
-
-        // Apply dark mode primary color if defined
-        if (colors.primaryDark) {
-            this.applyDarkThemeColor('--primary', colors.primaryDark);
-        }
-
-        // Apply primary text-color (light mode)
         if (colors.primaryText) {
-            root.style.setProperty('--text-primary', colors.primaryText);
+            cssRules += `  --text-primary: ${colors.primaryText};\n`;
         }
-
-    },
-
-    /**
-     * Apply color specifically for dark mode
-     * @param {string} property - CSS variable name
-     * @param {string} value - Color value
-     */
-    applyDarkThemeColor(property, value) {
-        // Find or create dark theme style element
-        let darkThemeStyle = document.getElementById('geoflow-dark-theme');
         
-        if (!darkThemeStyle) {
-            darkThemeStyle = document.createElement('style');
-            darkThemeStyle.id = 'geoflow-dark-theme';
-            document.head.appendChild(darkThemeStyle);
+        cssRules += '}\n\n';
+        
+        // Dark mode colors
+        cssRules += '[data-theme="dark"] {\n';
+        
+        if (colors.primaryDark) {
+            cssRules += `  --primary: ${colors.primaryDark};\n`;
+        } else if (colors.primary) {
+            // Fallback to light primary if dark not specified
+            cssRules += `  --primary: ${colors.primary};\n`;
         }
-
-        // Get existing rules
-        let rules = darkThemeStyle.sheet ? 
-            Array.from(darkThemeStyle.sheet.cssRules).map(rule => rule.cssText) : [];
         
-        // Check if dark theme rule exists
-        let darkRuleIndex = rules.findIndex(rule => rule.includes('[data-theme="dark"]'));
-        
-        if (darkRuleIndex === -1) {
-            // Create new dark theme rule
-            darkThemeStyle.sheet.insertRule(`[data-theme="dark"] { ${property}: ${value}; }`, 0);
-        } else {
-            // Update existing rule
-            const existingRule = darkThemeStyle.sheet.cssRules[darkRuleIndex];
-            existingRule.style.setProperty(property, value);
+        // In dark mode, text-primary is already defined in theme.css
+        // Only override if specifically provided
+        if (colors.primaryTextDark) {
+            cssRules += `  --text-primary: ${colors.primaryTextDark};\n`;
         }
+        
+        cssRules += '}\n';
+        
+        // Apply the CSS
+        themeStyle.textContent = cssRules;
     },
 
     /**
