@@ -292,7 +292,7 @@ const GeoflowPrint = {
         const config = this.getConfig();
         
         // Show loading with custom message
-        GeoflowUtils.showLoading('Génération de l\'aperçu...');
+        GeoflowUtils.showLoadingOverlay('Génération de l\'aperçu...');
         
         try {
             // Appliquer temporairement l'échelle
@@ -363,7 +363,7 @@ const GeoflowPrint = {
                         
             this.previewMapImage = dataUrl;
             
-            GeoflowUtils.hideLoading();
+            GeoflowUtils.hideLoadingOverlay();
             
             // Build legend HTML from centralized module
             const legendHTML = this.generateLegendHTML(config);
@@ -441,7 +441,7 @@ const GeoflowPrint = {
             };
                         
         } catch (error) {
-            GeoflowUtils.hideLoading();
+            GeoflowUtils.hideLoadingOverlay();
             console.error('=== PREVIEW ERROR ===', error);
             GeoflowUtils.showToast('Erreur lors de la capture: ' + error.message, 'error');
         }
@@ -461,7 +461,7 @@ const GeoflowPrint = {
             return;
         }
 
-        GeoflowUtils.showLoading('Impression de la carte...');
+        GeoflowUtils.showLoadingOverlay('Impression de la carte...');
 
         try {
             const config = this.getConfig();
@@ -701,11 +701,11 @@ const GeoflowPrint = {
             const filename = `geoflow_${config.title.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
             pdf.save(filename);
 
-            GeoflowUtils.hideLoading();
+            GeoflowUtils.hideLoadingOverlay();
             GeoflowUtils.showToast('PDF généré avec succès !', 'success');
 
         } catch (error) {
-            GeoflowUtils.hideLoading();
+            GeoflowUtils.hideLoadingOverlay();
             console.error('=== PDF GENERATION ERROR ===', error);
             alert('Erreur: ' + error.message);
             GeoflowUtils.showToast('Erreur: ' + error.message, 'error');

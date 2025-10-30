@@ -136,10 +136,10 @@ const GeoflowMap = {
             return;
         }
 
-        GeoflowUtils.showLoading();
+        GeoflowUtils.showLoadingOverlay();
         navigator.geolocation.getCurrentPosition(
             (pos) => {
-                GeoflowUtils.hideLoading();
+                GeoflowUtils.hideLoadingOverlay();
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
                 this.map.setView([lat, lng], 16);
@@ -151,7 +151,7 @@ const GeoflowMap = {
                 GeoflowUtils.showToast('Position localisée', 'success');
             },
             () => {
-                GeoflowUtils.hideLoading();
+                GeoflowUtils.hideLoadingOverlay();
                 GeoflowUtils.showToast('Impossible de localiser', 'error');
             }
         );

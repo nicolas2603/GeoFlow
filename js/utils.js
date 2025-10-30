@@ -5,7 +5,7 @@
 
 const GeoflowUtils = {
     /**
-     * Show loading spinner with custom message
+     * Show loading spinner with custom message (full screen - for app initialization)
      * @param {string} message - The message to display (default: 'Chargement de l'application...')
      */
     showLoading(message = 'Chargement de l\'application...') {
@@ -60,6 +60,74 @@ const GeoflowUtils = {
         const loading = document.getElementById('loading');
         if (loading) {
             loading.classList.remove('active');
+        }
+    },
+
+    /**
+     * Show loading overlay (semi-transparent - for operations like export/print)
+     * @param {string} message - The message to display
+     */
+    showLoadingOverlay(message = 'Traitement en cours...') {
+        // Remove existing overlay if any
+        this.hideLoadingOverlay();
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'loading-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.2s;
+        `;
+        
+        overlay.innerHTML = `
+            <div style="
+                background: var(--surface);
+                padding: 24px 32px;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+                min-width: 250px;
+            ">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid rgba(37, 99, 235, 0.1);
+                    border-top-color: var(--primary);
+                    border-radius: 50%;
+                    animation: spin 0.8s linear infinite;
+                "></div>
+                <div style="
+                    font-size: 0.95rem;
+                    font-weight: 500;
+                    color: var(--text-primary);
+                    text-align: center;
+                ">${message}</div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+    },
+
+    /**
+     * Hide loading overlay
+     */
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 200);
         }
     },
 

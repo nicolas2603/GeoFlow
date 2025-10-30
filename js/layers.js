@@ -79,6 +79,10 @@ const GeoflowLayers = {
                 </div>
             </div>
 
+            ${typeof GeoflowExternalSources !== 'undefined' ? GeoflowExternalSources.getAddSourceButton() : ''}
+
+            ${typeof GeoflowExternalSources !== 'undefined' ? GeoflowExternalSources.getExternalLayersHTML() : ''}
+
             <div class="stats">
                 <div class="stat-card">
                     <div class="stat-label">Latitude</div>
@@ -132,6 +136,47 @@ const GeoflowLayers = {
      * Attach event listeners to layer controls
      */
     attachListeners() {
+        // External sources button
+        const btnAddExternal = document.getElementById('btn-add-external-source');
+        if (btnAddExternal) {
+            btnAddExternal.addEventListener('click', () => {
+                GeoflowPanels.showPanel('external-source', 'layers');
+            });
+        }
+
+        // Handle external layers toggle
+        document.querySelectorAll('.layer-item[data-external="true"] .layer-item-main').forEach(main => {
+            const layerName = main.querySelector('.layer-name');
+            layerName.addEventListener('click', () => {
+                const item = main.closest('.layer-item');
+                const checkbox = main.querySelector('.layer-checkbox');
+                const layerId = item.dataset.layer;
+                
+                checkbox.checked = !checkbox.checked;
+                item.classList.toggle('active', checkbox.checked);
+                
+                this.toggleExternalLayer(layerId, checkbox.checked);
+            });
+        });
+
+        // Handle external layers opacity
+        document.querySelectorAll('.layer-item[data-external="true"] .opacity-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const item = slider.closest('.layer-item');
+                const layerId = item.dataset.layer;
+                const value = e.target.value;
+                const valueSpan = slider.previousElementSibling.querySelector('.opacity-value');
+                
+                valueSpan.textContent = value + '%';
+                this.layerOpacities[layerId] = value / 100;
+                
+                const layerInfo = GeoflowExternalSources.externalLayers.find(l => l.id === layerId);
+                if (layerInfo && layerInfo.layer.setOpacity) {
+                    layerInfo.layer.setOpacity(value / 100);
+                }
+            });
+        });
+
         // Theme accordion
         document.querySelectorAll('.layer-theme-header').forEach(header => {
             header.addEventListener('click', () => {
@@ -281,5 +326,23 @@ const GeoflowLayers = {
 		if (typeof GeoflowLegend !== 'undefined') {
 			GeoflowLegend.requestUpdate();
 		}
-	}
+	},
+
+    /**
+     * Toggle external layer visibility
+     */
+    toggleExternalLayer(layerId, show) {
+        const layerInfo = GeoflowExternalSources.externalLayers.find(l => l.id === layerId);
+        if (!layerInfo) return;
+        
+        if (show) {
+            this.activeLayerIds.add(layerId);
+            GeoflowMap.map.addLayer(layerInfo.layer);
+        } else {
+            this.activeLayerIds.delete(layerId);
+            GeoflowMap.map.removeLayer(layerInfo.layer);
+        }
+        
+        this.updateLegendWidget();
+    }
 };

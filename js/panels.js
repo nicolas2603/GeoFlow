@@ -214,6 +214,11 @@ const GeoflowPanels = {
                 content.innerHTML = GeoflowShare.getPanelContent();
                 GeoflowShare.attachListeners();
                 break;
+            case 'external-source':
+                title.textContent = 'Ajouter une couche externe';
+                content.innerHTML = GeoflowExternalSources.getPanelContent();
+                GeoflowExternalSources.attachListeners();
+                break;
             default:
                 // Try to load dynamically if module exists
                 const moduleName = 'Geoflow' + type.charAt(0).toUpperCase() + type.slice(1);

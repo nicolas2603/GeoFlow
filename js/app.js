@@ -32,6 +32,7 @@ const GeoflowApp = {
         // Initialize all modules
         GeoflowMap.init();
         GeoflowLayers.init();
+		GeoflowExternalSources.init();
         
         if (GeoflowConfig.isFeatureEnabled('draw')) {
             GeoflowDraw.init();

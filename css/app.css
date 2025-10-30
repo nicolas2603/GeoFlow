@@ -238,7 +238,7 @@
     width: 260px;
     max-height: calc(100vh - 40px);
     background: var(--surface);
-    border-radius: 12px;
+    border-radius: 8px;
     box-shadow: 0 8px 32px var(--shadow-lg);
     backdrop-filter: blur(20px);
     display: none;

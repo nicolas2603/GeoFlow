@@ -97,7 +97,7 @@ const GeoflowExport = {
     async exportMapImage() {
         const config = this.getConfig();
         
-        GeoflowUtils.showLoading('Génération de l\'image en cours...');
+        GeoflowUtils.showLoadingOverlay('Génération de l\'image en cours...');
 
         try {
             // Déterminer l'échelle selon la qualité
@@ -203,11 +203,11 @@ const GeoflowExport = {
             link.href = dataUrl;
             link.click();
 
-            GeoflowUtils.hideLoading();
+            GeoflowUtils.hideLoadingOverlay();
             GeoflowUtils.showToast(`Image exportée : ${config.filename}.${config.format}`, 'success');
 
         } catch (error) {
-            GeoflowUtils.hideLoading();
+            GeoflowUtils.hideLoadingOverlay();
             console.error('Export error:', error);
             GeoflowUtils.showToast('Erreur lors de l\'export : ' + error.message, 'error');
         }
