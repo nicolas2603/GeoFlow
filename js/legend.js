@@ -1,11 +1,15 @@
 /**
- * Geoflow Legend Module
- * Centralized legend management system
- * Handles legend widget display and updates from multiple sources
+ * Geoflow Legend Module - VERSION AMÉLIORÉE
+ * Centralized legend management system with external layer support
+ * 
+ * AMÉLIORATIONS:
+ * - Support des légendes d'images (WMS GetLegendGraphic)
+ * - Intégration des couches externes dans la légende
+ * - Meilleur rendu dans le widget, l'aperçu et l'impression
  */
 
 const GeoflowLegend = {
-    legendSources: new Map(), // Store legend providers
+    legendSources: new Map(),
     widget: null,
     widgetContent: null,
     isActive: false,
@@ -61,7 +65,6 @@ const GeoflowLegend = {
             
             if (!legendData || !legendData.items) return;
             
-            // Get layer name from config
             let layerName = layerId;
             if (GeoflowConfig.layersConfig?.themes) {
                 GeoflowConfig.layersConfig.themes.forEach(theme => {
@@ -94,7 +97,6 @@ const GeoflowLegend = {
             return [];
         }
 
-        // Count draw layers (blue) and import layers (green)
         let drawCount = 0;
         let importCount = 0;
 
@@ -135,8 +137,6 @@ const GeoflowLegend = {
      * @returns {Array} Array of legend sections
      */
     getMeasureLegend() {
-        // Measure layers are temporary and typically not shown in legend
-        // But we keep this structure in case it's needed in the future
         return [];
     },
 
@@ -163,19 +163,36 @@ const GeoflowLegend = {
 
     /**
      * Generate HTML for a legend section
-     * @param {Object} section - Legend section data
-     * @returns {string} HTML string
+     * AMÉLIORATION: Support des images de légende
      */
     generateSectionHTML(section) {
         return `
             <div class="legend-layer">
                 <div class="legend-layer-name">${section.title}</div>
-                ${section.items.map(item => `
-                    <div class="legend-item">
-                        <div class="legend-symbol ${item.symbol}" style="background-color: ${item.color}"></div>
-                        <div class="legend-label">${item.label}</div>
-                    </div>
-                `).join('')}
+                ${section.items.map(item => {
+                    // Support pour les images de légende (WMS GetLegendGraphic)
+                    if (item.symbol === 'image' && item.imageUrl) {
+                        return `
+                            <div class="legend-item" style="flex-direction: column; align-items: flex-start; padding: 4px 0;">
+                                <img src="${item.imageUrl}" 
+                                     alt="${item.label}" 
+                                     style="max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 4px;"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="legend-label" style="display: none; color: var(--text-secondary);">
+                                    ${item.label} (légende non disponible)
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Support standard pour les symboles classiques
+                    return `
+                        <div class="legend-item">
+                            <div class="legend-symbol ${item.symbol}" style="background-color: ${item.color}"></div>
+                            <div class="legend-label">${item.label}</div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
     },
@@ -258,11 +275,29 @@ const GeoflowLegend = {
     },
 
     /**
-     * Get legend data for export (e.g., for print/PDF)
-     * @returns {Array} Array of legend sections
+     * Get legend data for export (print/PDF)
+     * AMÉLIORATION: Traitement spécial pour les légendes d'images
      */
     getExportData() {
-        return this.collectLegendData();
+        const sections = this.collectLegendData();
+        
+        // Pour l'export, on peut transformer les images en texte simple
+        // ou garder l'URL de l'image pour un traitement ultérieur
+        return sections.map(section => ({
+            ...section,
+            items: section.items.map(item => {
+                if (item.symbol === 'image' && item.imageUrl) {
+                    // Pour l'export, on peut soit:
+                    // 1. Garder l'URL pour télécharger l'image plus tard
+                    // 2. Ou la transformer en symbole simple
+                    return {
+                        ...item,
+                        needsImageFetch: true // Flag pour indiquer qu'il faut récupérer l'image
+                    };
+                }
+                return item;
+            })
+        }));
     },
 
     /**

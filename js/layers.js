@@ -15,6 +15,58 @@ const GeoflowLayers = {
     init() {
         this.markerClusters = L.markerClusterGroup();
         GeoflowMap.map.addLayer(this.markerClusters);
+        
+        // Setup delegated listeners once
+        this.setupDelegatedListeners();
+    },
+
+    /**
+     * Setup delegated event listeners (only once)
+     */
+    setupDelegatedListeners() {
+        const panelContent = document.getElementById('panel-content');
+        if (!panelContent) return;
+        
+        // Toggle des couches externes - DÉLÉGATION
+        panelContent.addEventListener('click', (e) => {
+            const layerName = e.target.closest('.layer-name');
+            if (!layerName) return;
+            
+            const item = layerName.closest('.layer-item');
+            if (!item || !item.dataset.external) return;
+            
+            const checkbox = item.querySelector('.layer-checkbox');
+            const layerId = item.dataset.layer;
+            
+            const newState = !checkbox.checked;
+            checkbox.checked = newState;
+            item.classList.toggle('active', newState);
+            
+            this.toggleExternalLayer(layerId, newState);
+        });
+        
+        // Opacité des couches externes - DÉLÉGATION
+        panelContent.addEventListener('input', (e) => {
+            if (!e.target.classList.contains('opacity-slider')) return;
+            
+            const item = e.target.closest('.layer-item');
+            if (!item || !item.dataset.external) return;
+            
+            const layerId = item.dataset.layer;
+            const value = e.target.value;
+            const valueSpan = e.target.previousElementSibling?.querySelector('.opacity-value');
+            
+            if (valueSpan) {
+                valueSpan.textContent = value + '%';
+            }
+            
+            this.layerOpacities[layerId] = value / 100;
+            
+            const layerInfo = GeoflowExternalSources.externalLayers.find(l => l.id === layerId);
+            if (layerInfo && layerInfo.layer.setOpacity) {
+                layerInfo.layer.setOpacity(value / 100);
+            }
+        });
     },
 
     /**
@@ -79,9 +131,8 @@ const GeoflowLayers = {
                 </div>
             </div>
 
-            ${typeof GeoflowExternalSources !== 'undefined' ? GeoflowExternalSources.getAddSourceButton() : ''}
-
             ${typeof GeoflowExternalSources !== 'undefined' ? GeoflowExternalSources.getExternalLayersHTML() : ''}
+            ${typeof GeoflowExternalSources !== 'undefined' ? GeoflowExternalSources.getAddSourceButton() : ''}
 
             <div class="stats">
                 <div class="stat-card">
@@ -144,39 +195,6 @@ const GeoflowLayers = {
             });
         }
 
-        // Handle external layers toggle
-        document.querySelectorAll('.layer-item[data-external="true"] .layer-item-main').forEach(main => {
-            const layerName = main.querySelector('.layer-name');
-            layerName.addEventListener('click', () => {
-                const item = main.closest('.layer-item');
-                const checkbox = main.querySelector('.layer-checkbox');
-                const layerId = item.dataset.layer;
-                
-                checkbox.checked = !checkbox.checked;
-                item.classList.toggle('active', checkbox.checked);
-                
-                this.toggleExternalLayer(layerId, checkbox.checked);
-            });
-        });
-
-        // Handle external layers opacity
-        document.querySelectorAll('.layer-item[data-external="true"] .opacity-slider').forEach(slider => {
-            slider.addEventListener('input', (e) => {
-                const item = slider.closest('.layer-item');
-                const layerId = item.dataset.layer;
-                const value = e.target.value;
-                const valueSpan = slider.previousElementSibling.querySelector('.opacity-value');
-                
-                valueSpan.textContent = value + '%';
-                this.layerOpacities[layerId] = value / 100;
-                
-                const layerInfo = GeoflowExternalSources.externalLayers.find(l => l.id === layerId);
-                if (layerInfo && layerInfo.layer.setOpacity) {
-                    layerInfo.layer.setOpacity(value / 100);
-                }
-            });
-        });
-
         // Theme accordion
         document.querySelectorAll('.layer-theme-header').forEach(header => {
             header.addEventListener('click', () => {
@@ -185,19 +203,23 @@ const GeoflowLayers = {
             });
         });
 
-        // Layer toggle
+        // Layer toggle pour couches NORMALES (pas externes)
         document.querySelectorAll('.layer-item-main').forEach(main => {
+            const item = main.closest('.layer-item');
+            // Skip external layers (handled by delegation)
+            if (item.dataset.external) return;
+            
             const layerName = main.querySelector('.layer-name');
             
             layerName.addEventListener('click', () => {
-                const item = main.closest('.layer-item');
                 const checkbox = main.querySelector('.layer-checkbox');
                 const layerId = item.dataset.layer;
                 
-                checkbox.checked = !checkbox.checked;
-                item.classList.toggle('active', checkbox.checked);
+                const newState = !checkbox.checked;
+                checkbox.checked = newState;
+                item.classList.toggle('active', newState);
                 
-                this.toggleLayer(layerId, checkbox.checked);
+                this.toggleLayer(layerId, newState);
                 this.updateLegendWidget();
             });
         });
@@ -216,10 +238,13 @@ const GeoflowLayers = {
             });
         });
 
-        // Opacity sliders
+        // Opacity sliders pour couches NORMALES (pas externes)
         document.querySelectorAll('.opacity-slider').forEach(slider => {
+            const item = slider.closest('.layer-item');
+            // Skip external layers (handled by delegation)
+            if (item.dataset.external) return;
+            
             slider.addEventListener('input', (e) => {
-                const item = slider.closest('.layer-item');
                 const layerId = item.dataset.layer;
                 const value = e.target.value;
                 const valueSpan = slider.previousElementSibling.querySelector('.opacity-value');

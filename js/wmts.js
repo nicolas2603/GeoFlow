@@ -1,22 +1,78 @@
 /**
- * Geoflow External Sources Module
+ * Geoflow External Sources Module - VERSION CORRIGÉE FINALE
  * Handles adding WMS/WMTS/WFS layers from external sources
+ * 
+ * CORRECTIONS:
+ * 1. Fix du double '?' dans les URLs WFS ✅
+ * 2. Légendes WMS avec GetLegendGraphic ✅
+ * 3. Légendes WMTS désactivées (pas supporté par IGN) ✅
+ * 4. Légendes WFS avec symboles simples ✅
  */
 
 const GeoflowExternalSources = {
     externalLayers: [],
-    availableLayersData: [], // Stocker les métadonnées complètes des couches
+    availableLayersData: [],
     
-    /**
-     * Initialize external sources management
-     */
     init() {
-        // Nothing to initialize - using sub-panel instead of modal
+        // Register legend source for external layers
+        if (typeof GeoflowLegend !== 'undefined') {
+            GeoflowLegend.registerSource('external-layers', () => this.getExternalLayersLegend());
+        }
     },
 
     /**
-     * Get panel content HTML for adding external source
+     * Get legend data for external layers
+     * CORRECTION: WMTS n'utilise plus GetTile qui ne fonctionne pas
      */
+    getExternalLayersLegend() {
+        const sections = [];
+        
+        this.externalLayers.forEach(layerInfo => {
+            // Only include active layers
+            if (!GeoflowLayers.activeLayerIds.has(layerInfo.id)) {
+                return;
+            }
+            
+            if (layerInfo.type === 'wms') {
+                // WMS GetLegendGraphic request
+                const baseUrl = layerInfo.url.split('?')[0];
+                const legendUrl = `${baseUrl}?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetLegendGraphic&FORMAT=image/png&LAYER=${layerInfo.layerName}&STYLE=`;
+                
+                sections.push({
+                    title: layerInfo.name,
+                    items: [{
+                        symbol: 'image',
+                        imageUrl: legendUrl,
+                        label: 'Légende WMS'
+                    }]
+                });
+            } else if (layerInfo.type === 'wmts') {
+                // WMTS - Pas de légende standardisée disponible
+                // Utiliser un symbole simple
+                sections.push({
+                    title: layerInfo.name,
+                    items: [{
+                        symbol: 'polygon',
+                        color: '#8b5cf6',
+                        label: 'Couche de tuiles WMTS'
+                    }]
+                });
+            } else if (layerInfo.type === 'wfs') {
+                // WFS - simple color indicator
+                sections.push({
+                    title: layerInfo.name,
+                    items: [{
+                        symbol: 'polygon',
+                        color: '#3b82f6',
+                        label: 'Entités WFS'
+                    }]
+                });
+            }
+        });
+        
+        return sections;
+    },
+
     getPanelContent() {
         return `
             <div style="margin-bottom: 14px;">
@@ -81,9 +137,6 @@ const GeoflowExternalSources = {
         `;
     },
 
-    /**
-     * Attach event listeners
-     */
     attachListeners() {
         document.getElementById('btn-fetch-capabilities')?.addEventListener('click', () => {
             this.fetchCapabilities();
@@ -93,12 +146,10 @@ const GeoflowExternalSources = {
             this.addLayer();
         });
 
-        // Filtre sur les couches
         document.getElementById('filter-layers')?.addEventListener('input', (e) => {
             this.filterLayers(e.target.value);
         });
 
-        // Auto-remplissage du nom quand on sélectionne une couche
         document.getElementById('available-layers')?.addEventListener('change', (e) => {
             const selectedOption = e.target.options[e.target.selectedIndex];
             const layerTitle = selectedOption.textContent;
@@ -106,9 +157,6 @@ const GeoflowExternalSources = {
         });
     },
 
-    /**
-     * Get the add external source button HTML
-     */
     getAddSourceButton() {
         return `
             <button class="btn btn-sm btn-primary w-100" id="btn-add-external-source" style="margin-bottom: 14px;">
@@ -117,9 +165,6 @@ const GeoflowExternalSources = {
         `;
     },
 
-    /**
-     * Filter layers list
-     */
     filterLayers(query) {
         const select = document.getElementById('available-layers');
         const options = select.querySelectorAll('option');
@@ -133,9 +178,6 @@ const GeoflowExternalSources = {
         });
     },
 
-    /**
-     * Fetch GetCapabilities
-     */
     async fetchCapabilities() {
         const type = document.getElementById('external-service-type').value;
         const url = document.getElementById('external-service-url').value.trim();
@@ -155,12 +197,15 @@ const GeoflowExternalSources = {
             urlObj.searchParams.delete('REQUEST');
             capabilitiesUrl = urlObj.toString();
             
+            // Déterminer le séparateur correct
+            const separator = capabilitiesUrl.includes('?') ? '&' : '?';
+            
             if (type === 'wms') {
-                capabilitiesUrl += (capabilitiesUrl.includes('?') ? '&' : '?') + 'SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0';
+                capabilitiesUrl += `${separator}SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0`;
             } else if (type === 'wmts') {
-                capabilitiesUrl += (capabilitiesUrl.includes('?') ? '&' : '?') + 'SERVICE=WMTS&REQUEST=GetCapabilities&VERSION=1.0.0';
+                capabilitiesUrl += `${separator}SERVICE=WMTS&REQUEST=GetCapabilities&VERSION=1.0.0`;
             } else if (type === 'wfs') {
-                capabilitiesUrl += (capabilitiesUrl.includes('?') ? '&' : '?') + 'SERVICE=WFS&REQUEST=GetCapabilities&VERSION=2.0.0';
+                capabilitiesUrl += `${separator}SERVICE=WFS&REQUEST=GetCapabilities&VERSION=2.0.0`;
             }
 
             const response = await fetch(capabilitiesUrl);
@@ -177,7 +222,6 @@ const GeoflowExternalSources = {
                 return;
             }
 
-            // Stocker les données complètes des couches
             this.availableLayersData = layers;
 
             const select = document.getElementById('available-layers');
@@ -190,13 +234,10 @@ const GeoflowExternalSources = {
         } catch (error) {
             console.error('Capabilities error:', error);
             GeoflowUtils.hideLoadingOverlay();
-            GeoflowUtils.showToast('Erreur lors de la récupération', 'error');
+            GeoflowUtils.showToast('Erreur lors de la récupération: ' + error.message, 'error');
         }
     },
 
-    /**
-     * Parse capabilities XML
-     */
     parseCapabilities(xmlDoc, type) {
         const layers = [];
 
@@ -213,11 +254,9 @@ const GeoflowExternalSources = {
                 const name = layer.querySelector('Identifier')?.textContent;
                 const title = layer.querySelector('Title')?.textContent;
                 
-                // Récupérer le premier style disponible
                 const styleElement = layer.querySelector('Style Identifier');
                 const style = styleElement?.textContent || 'normal';
                 
-                // Récupérer le TileMatrixSet
                 const tileMatrixSetLink = layer.querySelector('TileMatrixSetLink TileMatrixSet');
                 const tileMatrixSet = tileMatrixSetLink?.textContent || 'PM';
                 
@@ -242,9 +281,6 @@ const GeoflowExternalSources = {
         return layers;
     },
 
-    /**
-     * Add layer to map
-     */
     addLayer() {
         const type = document.getElementById('external-service-type').value;
         const baseUrl = document.getElementById('external-service-url').value.trim();
@@ -260,11 +296,7 @@ const GeoflowExternalSources = {
         const layerId = 'external_' + Date.now();
         let layer;
 
-        // Nettoyer l'URL de base - supprimer tous les paramètres sauf le base path
         let cleanBaseUrl = baseUrl.split('?')[0];
-        if (!cleanBaseUrl.endsWith('?')) {
-            cleanBaseUrl += '?';
-        }
 
         if (type === 'wms') {
             layer = L.tileLayer.wms(cleanBaseUrl, {
@@ -275,17 +307,18 @@ const GeoflowExternalSources = {
                 attribution: customName
             });
         } else if (type === 'wmts') {
-            // Récupérer les métadonnées de la couche sélectionnée
             const layerData = this.availableLayersData.find(l => l.name === layerName);
             const style = layerData?.style || 'normal';
             const tileMatrixSet = layerData?.tileMatrixSet || 'PM';
             
-            // Construction correcte de l'URL WMTS - UN SEUL JEU DE PARAMÈTRES
-            const wmtsUrl = cleanBaseUrl + 
+            const separator = cleanBaseUrl.includes('?') ? '&' : '?';
+            const wmtsUrl = cleanBaseUrl + separator +
                 `SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layerName}&STYLE=${style}&TILEMATRIXSET=${tileMatrixSet}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png`;
             
             layer = L.tileLayer(wmtsUrl, {
                 attribution: customName,
+				keepBuffer: 2,
+				updateWhenZooming: false,
                 maxZoom: 19
             });
         } else if (type === 'wfs') {
@@ -309,7 +342,6 @@ const GeoflowExternalSources = {
 
         GeoflowUtils.showToast(`Couche "${customName}" ajoutée`, 'success');
 
-        // Retour au panel layers
         if (GeoflowPanels.currentPanel === 'external-source') {
             GeoflowPanels.showPanel('layers');
         }
@@ -319,17 +351,33 @@ const GeoflowExternalSources = {
         }
     },
 
-    /**
-     * Load WFS layer
-     */
     async loadWFSLayer(baseUrl, layerName, customName, layerId) {
         GeoflowUtils.showLoadingOverlay('Chargement de la couche WFS...');
 
         try {
-            const wfsUrl = baseUrl + `?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAME=${layerName}&OUTPUTFORMAT=application/json`;
+            const separator = baseUrl.includes('?') ? '&' : '?';
+            const wfsUrl = baseUrl + `${separator}SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAME=${layerName}&OUTPUTFORMAT=application/json`;
+            
+            console.log('WFS URL construite:', wfsUrl);
             
             const response = await fetch(wfsUrl);
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Response non-JSON:', text);
+                throw new Error('La réponse n\'est pas du JSON valide');
+            }
+            
             const geojson = await response.json();
+            
+            if (!geojson.features || geojson.features.length === 0) {
+                throw new Error('Aucune entité trouvée dans la couche WFS');
+            }
 
             const layer = L.geoJSON(geojson, {
                 style: {
@@ -341,7 +389,11 @@ const GeoflowExternalSources = {
                     if (feature.properties) {
                         let popup = `<div class="feature-popup"><h6>${customName}</h6><table>`;
                         Object.entries(feature.properties).forEach(([key, value]) => {
-                            if (value !== null) {
+                            if (value !== null && 
+                                key !== 'geom' && 
+                                key !== 'geometry' && 
+                                key !== 'the_geom' &&
+                                !key.startsWith('_')) {
                                 popup += `<tr><td>${key}</td><td>${value}</td></tr>`;
                             }
                         });
@@ -371,9 +423,8 @@ const GeoflowExternalSources = {
             }
 
             GeoflowUtils.hideLoadingOverlay();
-            GeoflowUtils.showToast(`Couche WFS "${customName}" ajoutée`, 'success');
+            GeoflowUtils.showToast(`Couche WFS "${customName}" ajoutée (${geojson.features.length} entités)`, 'success');
 
-            // Retour au panel layers
             if (GeoflowPanels.currentPanel === 'external-source') {
                 GeoflowPanels.showPanel('layers');
             }
@@ -385,13 +436,10 @@ const GeoflowExternalSources = {
         } catch (error) {
             console.error('WFS error:', error);
             GeoflowUtils.hideLoadingOverlay();
-            GeoflowUtils.showToast('Erreur lors du chargement WFS', 'error');
+            GeoflowUtils.showToast('Erreur WFS: ' + error.message, 'error');
         }
     },
 
-    /**
-     * Get external layers HTML for panel
-     */
     getExternalLayersHTML() {
         if (this.externalLayers.length === 0) return '';
 
@@ -399,7 +447,7 @@ const GeoflowExternalSources = {
             <div class="layer-theme expanded" data-theme="external">
                 <div class="layer-theme-header">
                     <div class="layer-theme-title">
-                        <i class="fa-solid fa-globe layer-theme-icon"></i>
+                        <i class="fa-solid fa-plus layer-theme-icon"></i>
                         <span>Sources externes</span>
                         <span class="layer-theme-count">(${this.externalLayers.length})</span>
                     </div>
@@ -454,9 +502,6 @@ const GeoflowExternalSources = {
         return html;
     },
 
-    /**
-     * Remove external layer
-     */
     removeLayer(layerId) {
         const layerInfo = this.externalLayers.find(l => l.id === layerId);
         if (!layerInfo) return;
