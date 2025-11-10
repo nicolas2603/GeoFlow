@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geoflow</title>
+    <link rel="shortcut icon" type="image/png" href="favicon.ico"/>
+
+    <!-- External CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    
+    <!-- Application CSS -->
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <button class="tool-btn" id="btn-layers">
+            <i class="fa-solid fa-layer-group"></i>
+            <span class="tooltip-custom tooltip-bottom">Couches</span>
+        </button>
+        <button class="tool-btn" id="btn-legend">
+            <i class="fa-solid fa-palette"></i>
+            <span class="tooltip-custom tooltip-bottom">Légende</span>
+        </button>
+        <button class="tool-btn" id="btn-draw">
+            <i class="fa-solid fa-pencil"></i>
+            <span class="tooltip-custom tooltip-bottom">Dessiner</span>
+        </button>
+        <button class="tool-btn" id="btn-measure">
+            <i class="fa-solid fa-ruler-combined"></i>
+            <span class="tooltip-custom tooltip-bottom">Mesurer</span>
+        </button>
+        <button class="tool-btn" id="btn-metier">
+            <i class="fa-solid fa-lightbulb"></i>
+            <span class="tooltip-custom tooltip-bottom">Applications métiers</span>
+        </button>
+        <button class="tool-btn" id="btn-tools">
+            <i class="fa-solid fa-gear"></i>
+            <span class="tooltip-custom tooltip-bottom">Outils</span>
+        </button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <div class="search-input-wrapper">
+            <input type="text" class="search-input" id="search-input" placeholder="Rechercher un lieu...">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        </div>
+        <div class="search-results" id="search-results"></div>
+    </div>
+
+    <!-- Panel -->
+    <div class="panel" id="panel">
+        <div class="panel-header">
+            <h5 class="panel-title" id="panel-title">Panneau</h5>
+            <button class="panel-close" id="panel-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="panel-content" id="panel-content"></div>
+    </div>
+
+    <!-- Legend Widget -->
+    <div class="legend-widget" id="legend-widget">
+        <div class="legend-widget-header">
+            <div class="legend-widget-title">Légende</div>
+            <button class="legend-widget-close" id="legend-widget-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="legend-widget-content" id="legend-widget-content">
+            <div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.8rem;">
+                Aucune couche active
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+        <button class="action-btn" id="btn-locate">
+            <i class="fa-solid fa-location-crosshairs"></i>
+            <span class="tooltip-custom tooltip-left">Ma position</span>
+        </button>
+        <button class="action-btn" id="btn-fullscreen">
+            <i class="fa-solid fa-expand"></i>
+            <span class="tooltip-custom tooltip-left">Plein écran</span>
+        </button>
+        <button class="action-btn" id="btn-home">
+            <i class="fa-solid fa-globe"></i>
+            <span class="tooltip-custom tooltip-left">Vue initiale</span>
+        </button>
+        <button class="action-btn" id="btn-basemap">
+            <img src="assets/osm.png" alt="Basemap" id="basemap-preview">
+            <span class="tooltip-custom tooltip-left">Fonds de carte</span>
+        </button>
+    </div>
+
+    <!-- Basemap Gallery -->
+    <div class="basemap-gallery" id="basemap-gallery">
+        <!-- Generated dynamically from config.json -->
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Loading -->
+    <div class="loading active" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-text">Chargement de l'application...</div>
+    </div>
+
+    <!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <!-- Application Scripts -->
+	<script src="js/app.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/panels.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/addons/layers.js"></script>
+    <script src="js/addons/wmts.js"></script>
+    <script src="js/addons/ai.temp.js"></script>
+    <script src="js/addons/draw.js"></script>
+    <script src="js/addons/measure.js"></script>
+    <script src="js/addons/search.js"></script>
+    <script src="js/addons/basemap.js"></script>
+    <script src="js/addons/print.js"></script>
+    <script src="js/addons/tools.js"></script>
+    <script src="js/addons/legend.js"></script>
+    <script src="js/addons/metier.js"></script>
+    <script src="js/addons/calepinage.js"></script>
+    <script src="js/addons/export.js"></script>
+    <script src="js/addons/share.js"></script>
+</body>
+</html>
