@@ -100,9 +100,14 @@ const GeoflowLayers = {
         }
 
         let html = `
-            <div class="layer-search">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="layer-search-input" placeholder="Filtrer les couches">
+            <div style="display: flex; gap: 8px; margin-bottom: 16px; align-items: center;">
+                <div class="layer-search" style="flex: 1; margin-bottom: 0;">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="layer-search-input" placeholder="Filtrer les couches">
+                </div>
+                <button class="mini-legend-btn" id="btn-toggle-legend" title="Afficher la légende">
+                    <i class="fa-solid fa-palette"></i>
+                </button>
             </div>
         `;
 
@@ -311,6 +316,14 @@ const GeoflowLayers = {
                     theme.style.display = visibleItems.length > 0 || query === '' ? 'block' : 'none';
                 });
             }, 300));
+        }
+
+        const btnToggleLegend = document.getElementById('btn-toggle-legend');
+        if (btnToggleLegend) {
+            btnToggleLegend.addEventListener('click', () => {
+                GeoflowPanels.toggleLegend();
+                btnToggleLegend.classList.toggle('active');
+            });
         }
 
         // Setup annotation listeners

@@ -82,7 +82,14 @@ const GeoflowApp = {
                 if (config.theme) {
                     GeoflowConfig.theme = config.theme;
                     GeoflowConfig.app.title = config.theme.title.split(' - ')[0] || 'Geoflow';
-					GeoflowConfig.app.version = config.theme.version.split(' - ')[0] || '1.0';
+                    GeoflowConfig.app.version = config.theme.version.split(' - ')[0] || '1.0';
+                    
+                    // Update title in HTML
+                    document.title = GeoflowConfig.app.title;
+                    const brandTitle = document.querySelector('.command-bar-title');
+                    if (brandTitle) {
+                        brandTitle.textContent = GeoflowConfig.app.title;
+                    }
                 }
                 if (config.map) {
                     GeoflowConfig.map = { ...GeoflowConfig.map, ...config.map };

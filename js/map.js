@@ -22,7 +22,7 @@ const GeoflowMap = {
         // Add event listeners
         this.map.on('moveend', () => this.updateStats());
 
-        GeoflowUtils.showToast('Geoflow prêt', 'success');
+        GeoflowUtils.showToast('Application prête', 'success');
         
         return this.map;
     },

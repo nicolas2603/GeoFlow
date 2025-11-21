@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geoflow</title>
+    <title></title>
     <link rel="shortcut icon" type="image/png" href="favicon.ico"/>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- External CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -21,44 +26,45 @@
 <body>
     <div id="map"></div>
 
-    <!-- Toolbar -->
-    <div class="toolbar">
-        <button class="tool-btn" id="btn-layers">
-            <i class="fa-solid fa-layer-group"></i>
-            <span class="tooltip-custom tooltip-bottom">Couches</span>
-        </button>
-        <button class="tool-btn" id="btn-legend">
-            <i class="fa-solid fa-palette"></i>
-            <span class="tooltip-custom tooltip-bottom">Légende</span>
-        </button>
-        <button class="tool-btn" id="btn-draw">
-            <i class="fa-solid fa-pencil"></i>
-            <span class="tooltip-custom tooltip-bottom">Dessiner</span>
-        </button>
-        <button class="tool-btn" id="btn-measure">
-            <i class="fa-solid fa-ruler-combined"></i>
-            <span class="tooltip-custom tooltip-bottom">Mesurer</span>
-        </button>
-        <button class="tool-btn" id="btn-metier">
-            <i class="fa-solid fa-lightbulb"></i>
-            <span class="tooltip-custom tooltip-bottom">Applications métiers</span>
-        </button>
-        <button class="tool-btn" id="btn-tools">
-            <i class="fa-solid fa-gear"></i>
-            <span class="tooltip-custom tooltip-bottom">Outils</span>
-        </button>
-    </div>
-
-    <!-- Search Bar -->
-    <div class="search-bar">
-        <div class="search-input-wrapper">
-            <input type="text" class="search-input" id="search-input" placeholder="Rechercher un lieu...">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    <!-- Command Bar - Top -->
+    <div class="command-bar">
+        <div class="command-bar-brand">
+            <img src="assets/logo.png" alt="Geoflow" class="command-bar-logo">
+            <div class="command-bar-title"></div>
         </div>
-        <div class="search-results" id="search-results"></div>
+        
+        <div class="command-bar-actions">
+            <button class="command-btn" id="btn-layers" title="Couches">
+                <i class="fa-solid fa-layer-group"></i>
+                <span class="tooltip-custom tooltip-bottom">Couches</span>
+            </button>
+            <button class="command-btn" id="btn-draw" title="Dessiner">
+                <i class="fa-solid fa-pencil"></i>
+                <span class="tooltip-custom tooltip-bottom">Dessiner</span>
+            </button>
+            <button class="command-btn" id="btn-measure" title="Mesurer">
+                <i class="fa-solid fa-ruler-combined"></i>
+                <span class="tooltip-custom tooltip-bottom">Mesurer</span>
+            </button>
+            <button class="command-btn" id="btn-metier" title="Applications métiers">
+                <i class="fa-solid fa-lightbulb"></i>
+                <span class="tooltip-custom tooltip-bottom">Applications métiers</span>
+            </button>
+            <button class="command-btn" id="btn-tools" title="Outils">
+                <i class="fa-solid fa-gear"></i>
+                <span class="tooltip-custom tooltip-bottom">Outils</span>
+            </button>
+        </div>
+
+        <!-- Search in Command Bar -->
+        <div class="command-search">
+            <input type="text" class="command-search-input" id="search-input" placeholder="Rechercher un lieu...">
+            <i class="fa-solid fa-magnifying-glass command-search-icon"></i>
+            <div class="search-results" id="search-results"></div>
+        </div>
     </div>
 
-    <!-- Panel -->
+    <!-- Panel - Left Side -->
     <div class="panel" id="panel">
         <div class="panel-header">
             <h5 class="panel-title" id="panel-title">Panneau</h5>
@@ -69,22 +75,7 @@
         <div class="panel-content" id="panel-content"></div>
     </div>
 
-    <!-- Legend Widget -->
-    <div class="legend-widget" id="legend-widget">
-        <div class="legend-widget-header">
-            <div class="legend-widget-title">Légende</div>
-            <button class="legend-widget-close" id="legend-widget-close">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div class="legend-widget-content" id="legend-widget-content">
-            <div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.8rem;">
-                Aucune couche active
-            </div>
-        </div>
-    </div>
-
-    <!-- Actions -->
+    <!-- Actions - Right Side -->
     <div class="actions">
         <button class="action-btn" id="btn-locate">
             <i class="fa-solid fa-location-crosshairs"></i>
@@ -109,6 +100,21 @@
         <!-- Generated dynamically from config.json -->
     </div>
 
+    <!-- Legend Widget - Bottom Right -->
+    <div class="legend-widget" id="legend-widget">
+        <div class="legend-widget-header">
+            <div class="legend-widget-title">Légende</div>
+            <button class="legend-widget-close" id="legend-widget-close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="legend-widget-content" id="legend-widget-content">
+            <div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.8rem;">
+                Aucune couche active
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
@@ -129,7 +135,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 
     <!-- Application Scripts -->
-	<script src="js/app.js"></script>
+    <script src="js/app.js"></script>
     <script src="js/config.js"></script>
     <script src="js/map.js"></script>
     <script src="js/panels.js"></script>

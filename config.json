@@ -1,8 +1,7 @@
 {
   "theme": {
-    "name": "default",
     "title": "Geoflow",
-	"version": "1.0",
+    "version": "1.0",
     "colors": {
       "primary": "#378ba7",
       "primaryDark": "#519cb3",
@@ -19,16 +18,14 @@
     "baseLayers": {
       "osm": {
         "name": "OpenStreetMap",
-        "icon": "bi-map",
         "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-		"preview": "assets/osm.png",
+        "preview": "assets/osm.png",
         "attribution": "© OpenStreetMap",
         "maxZoom": 19,
         "default": true
       },
       "satellite": {
         "name": "Satellite ESRI",
-        "icon": "bi-globe",
         "url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         "preview": "assets/satellite.png",
         "attribution": "© Esri",
@@ -36,7 +33,6 @@
       },
       "ign-orthophoto": {
         "name": "Satellite IGN",
-        "icon": "bi-camera",
         "type": "wmts",
         "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg",
         "preview": "assets/ortho-ign.png",
@@ -45,7 +41,6 @@
       },
       "ign-plan": {
         "name": "Plan",
-        "icon": "bi-map",
         "type": "wmts",
         "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png",
         "preview": "assets/plan-ign.png",
@@ -54,7 +49,6 @@
       },
       "ign-cadastre": {
         "name": "Cadastre",
-        "icon": "bi-grid-3x3",
         "type": "wmts",
         "url": "https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png",
         "preview": "assets/cadastre.png",
@@ -63,7 +57,6 @@
       },
       "topo": {
         "name": "OpenTopo",
-        "icon": "bi-mountain",
         "url": "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
         "preview": "assets/topo.png",
         "attribution": "© OpenTopoMap",
@@ -71,7 +64,6 @@
       },
       "positron": {
         "name": "Positron",
-        "icon": "bi-map",
         "url": "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
         "preview": "assets/positron.png",
         "attribution": "© CARTO",
@@ -79,7 +71,6 @@
       },
       "darkmatter": {
         "name": "Dark Matter",
-        "icon": "bi-map-fill",
         "url": "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
         "preview": "assets/dark.png",
         "attribution": "© CARTO",
@@ -94,95 +85,50 @@
   "layers": {
     "themes": [
       {
-        "id": "environnement",
-        "name": "Environnement",
-        "icon": "bi-tree",
+        "id": "admin",
+        "name": "Administratif",
+        "icon": "fa-earth-americas",
         "layers": [
           {
-            "id": "natura2000",
-            "name": "Zones Natura 2000",
-            "source": "DREAL 2024",
-            "date": "Janvier 2024"
-          },
-          {
-            "id": "espaces-verts",
-            "name": "Espaces verts",
+            "id": "communes",
+            "name": "Limites communales",
+            "type": "empty",
             "source": "IGN",
-            "date": "2024"
-          },
-          {
-            "id": "zones-humides",
-            "name": "Zones humides",
-            "source": "Agence de l'eau",
-            "date": "2024"
+            "date": "2024",
+            "url": "",
+            "style": {}
           }
         ]
       },
 	  {
-        "id": "services",
-        "name": "Services",
-        "icon": "bi-bolt",
-        "layers": [
-          {
-            "id": "postes_electriques_rte",
-            "name": "Postes électriques RTE",
-            "type": "postgis",
-            "source": "CAPARESEAU",
-            "date": "19/10/2025",
-            "table": "services.postes_electriques_rte",
-            "geomColumn": "geom",
-            "srid": 2154,
-            "style": {
-              "color": "#8e44ad",
-              "weight": 2,
-              "fillOpacity": 0.3
-            },
-            "endpoint": {
-              "geojson": "/api/layers/postes_electriques_rte/data",
-              "tiles": "/api/tiles/postes_electriques_rte/{z}/{x}/{y}.pbf"
-            },
-            "threshold": 1000,
-            "queryable": true,
-            "filterable": true,
-            "fields": ["code", "nom"]
-          }
-        ]
-      },
-      {
-        "id": "transport",
-        "name": "Transport",
-        "icon": "bi-bus-front",
-        "layers": [
-          {
-            "id": "transports-publics",
-            "name": "Transports publics",
-            "source": "TAM",
-            "date": "2024"
-          },
-          {
-            "id": "parkings",
-            "name": "Parkings",
-            "source": "Ville de Montpellier",
-            "date": "2024"
-          }
-        ]
-      },
-      {
         "id": "demo",
         "name": "Démonstration",
-        "icon": "bi-star",
+        "icon": "fa-star",
         "layers": [
           {
             "id": "points",
             "name": "Points d'intérêt",
+            "type": "geojson",
             "source": "OpenStreetMap",
-            "date": "2024"
+            "date": "2024",
+            "url": "data/demo_points.geojson",
+            "style": {
+              "clustered": true,
+              "clusterRadius": 50
+            }
           },
           {
             "id": "zones",
             "name": "Zones administratives",
+            "type": "geojson",
             "source": "IGN",
-            "date": "2024"
+            "date": "2024",
+            "url": "data/demo_zones.geojson",
+            "style": {
+              "color": "#2563eb",
+              "weight": 2,
+              "fillOpacity": 0.2
+            }
           }
         ]
       }
@@ -202,15 +148,6 @@
       "type": "simple",
       "items": [
         { "symbol": "polygon", "color": "#2563eb", "label": "Centre-ville" }
-      ]
-    },
-    "natura2000": {
-      "type": "categorized",
-      "items": [
-        { "symbol": "polygon", "color": "#8e44ad", "label": "ZPS - Directive oiseaux" },
-        { "symbol": "polygon", "color": "#16a085", "label": "ZSC - Directive habitats" },
-        { "symbol": "polygon", "color": "#f39c12", "label": "Zone tampon" },
-        { "symbol": "line", "color": "#c0392b", "label": "Limites" }
       ]
     }
   },

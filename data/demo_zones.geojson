@@ -1,0 +1,34 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 1,
+        "name": "Centre-ville",
+        "type": "Zone administrative",
+        "description": "Périmètre du centre historique de Montpellier",
+        "population_estimee": 15000,
+        "superficie_ha": 45
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [3.865, 43.615],
+            [3.885, 43.615],
+            [3.885, 43.605],
+            [3.865, 43.605],
+            [3.865, 43.615]
+          ]
+        ]
+      }
+    }
+  ]
+}

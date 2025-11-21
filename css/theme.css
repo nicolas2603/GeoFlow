@@ -2,39 +2,67 @@
 :root {
     /* Colors - Can be overridden by config.json */
     --primary: #2f89af;
+    --primary-hover: #4a9dbf;
+    --primary-light: rgba(47, 137, 175, 0.1);
     
-    /* Surface colors */
-    --surface: rgba(255, 255, 255, 0.95);
-    --bg-base: #ffffff;
+    /* Surface colors - Glassmorphism */
+    --surface: rgba(255, 255, 255, 0.75);
+    --surface-elevated: rgba(255, 255, 255, 0.85);
+    --bg-base: #f8fafc;
+    --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     
     /* Text colors */
-    --text-primary: #111827;
-    --text-secondary: #6b7280;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
     
     /* Border and effects */
-    --border-color: rgba(0, 0, 0, 0.06);
-    --hover-bg: rgba(0, 0, 0, 0.02);
-    --shadow: rgba(0, 0, 0, 0.1);
-    --shadow-lg: rgba(0, 0, 0, 0.15);
+    --border-color: rgba(0, 0, 0, 0.08);
+    --border-light: rgba(0, 0, 0, 0.04);
+    --hover-bg: rgba(0, 0, 0, 0.03);
+    --shadow: rgba(0, 0, 0, 0.08);
+    --shadow-md: rgba(0, 0, 0, 0.12);
+    --shadow-lg: rgba(0, 0, 0, 0.16);
+    
+    /* Glass effect */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --blur-amount: 20px;
+    
+    /* Spacing */
+    --header-height: 64px;
+    --panel-width: 380px;
 }
 
 [data-theme="dark"] {
     /* Colors - Can be overridden by config.json with primaryDark, etc. */
     --primary: #519cb3;
+    --primary-hover: #6aacbe;
+    --primary-light: rgba(81, 156, 179, 0.15);
     
-    /* Surface colors */
-    --surface: rgba(17, 24, 39, 0.95);
-    --bg-base: #111827;
+    /* Surface colors - Glassmorphism */
+    --surface: rgba(15, 23, 42, 0.75);
+    --surface-elevated: rgba(15, 23, 42, 0.85);
+    --bg-base: #0f172a;
+    --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     
     /* Text colors */
-    --text-primary: #f9fafb;
-    --text-secondary: #9ca3af;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-tertiary: #64748b;
     
     /* Border and effects */
     --border-color: rgba(255, 255, 255, 0.1);
-    --hover-bg: rgba(255, 255, 255, 0.05);
-    --shadow: rgba(0, 0, 0, 0.3);
-    --shadow-lg: rgba(0, 0, 0, 0.5);
+    --border-light: rgba(255, 255, 255, 0.05);
+    --hover-bg: rgba(255, 255, 255, 0.06);
+    --shadow: rgba(0, 0, 0, 0.4);
+    --shadow-md: rgba(0, 0, 0, 0.5);
+    --shadow-lg: rgba(0, 0, 0, 0.6);
+    
+    /* Glass effect */
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --blur-amount: 20px;
 }
 
 * {
@@ -43,11 +71,17 @@
     box-sizing: border-box;
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+html, body {
+    height: 100%;
+    width: 100%;
     overflow: hidden;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     transition: background-color 0.3s ease;
-    background: var(--bg-base);
+    background: var(--bg-gradient);
+    position: relative;
 }
 
 /* Scrollbars */
@@ -66,7 +100,7 @@ body {
 .panel-content::-webkit-scrollbar-thumb,
 .search-results::-webkit-scrollbar-thumb,
 .legend-widget-content::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.15);
     border-radius: 3px;
 }
 
@@ -79,11 +113,43 @@ body {
 .panel-content::-webkit-scrollbar-thumb:hover,
 .search-results::-webkit-scrollbar-thumb:hover,
 .legend-widget-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.25);
 }
 
 [data-theme="dark"] .panel-content::-webkit-scrollbar-thumb:hover,
 [data-theme="dark"] .search-results::-webkit-scrollbar-thumb:hover,
 [data-theme="dark"] .legend-widget-content::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
 }

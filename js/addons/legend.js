@@ -1,11 +1,6 @@
 /**
- * Geoflow Legend Module - VERSION AMÉLIORÉE
+ * Geoflow Legend Module - VERSION AVEC ANNOTATIONS
  * Centralized legend management system with external layer support
- * 
- * AMÉLIORATIONS:
- * - Support des légendes d'images (WMS GetLegendGraphic)
- * - Intégration des couches externes dans la légende
- * - Meilleur rendu dans le widget, l'aperçu et l'impression
  */
 
 const GeoflowLegend = {
@@ -23,8 +18,7 @@ const GeoflowLegend = {
 
         // Register built-in legend sources
         this.registerSource('layers', () => this.getLayersLegend());
-        this.registerSource('draw', () => this.getDrawLegend());
-        this.registerSource('measure', () => this.getMeasureLegend());
+        this.registerSource('annotations', () => this.getAnnotationsLegend());
 
         // Listen for legend updates from other modules
         document.addEventListener('geoflow:legend-update', () => {
@@ -34,8 +28,6 @@ const GeoflowLegend = {
 
     /**
      * Register a legend source
-     * @param {string} sourceId - Unique identifier for the source
-     * @param {Function} provider - Function that returns legend data
      */
     registerSource(sourceId, provider) {
         this.legendSources.set(sourceId, provider);
@@ -43,7 +35,6 @@ const GeoflowLegend = {
 
     /**
      * Unregister a legend source
-     * @param {string} sourceId - Source identifier
      */
     unregisterSource(sourceId) {
         this.legendSources.delete(sourceId);
@@ -51,7 +42,6 @@ const GeoflowLegend = {
 
     /**
      * Get legend data from layers module
-     * @returns {Array} Array of legend sections
      */
     getLayersLegend() {
         if (typeof GeoflowLayers === 'undefined' || !GeoflowLayers.activeLayerIds) {
@@ -61,6 +51,11 @@ const GeoflowLegend = {
         const sections = [];
         
         GeoflowLayers.activeLayerIds.forEach(layerId => {
+            // Skip annotation layers (handled separately)
+            if (layerId === 'user-draw' || layerId === 'user-import') {
+                return;
+            }
+
             const legendData = GeoflowConfig.legends[layerId];
             
             if (!legendData || !legendData.items) return;
@@ -83,66 +78,52 @@ const GeoflowLegend = {
     },
 
     /**
-     * Get legend data from draw module
-     * @returns {Array} Array of legend sections
+     * Get legend data from annotations module
      */
-    getDrawLegend() {
-        if (typeof GeoflowDraw === 'undefined' || !GeoflowDraw.drawnItems) {
+    getAnnotationsLegend() {
+        if (typeof GeoflowAnnotations === 'undefined') {
             return [];
         }
-
-        const layers = GeoflowDraw.drawnItems.getLayers();
-        
-        if (layers.length === 0) {
-            return [];
-        }
-
-        let drawCount = 0;
-        let importCount = 0;
-
-        layers.forEach(layer => {
-            if (layer.options && layer.options.color === '#10b981') {
-                importCount++;
-            } else {
-                drawCount++;
-            }
-        });
 
         const items = [];
-
-        if (drawCount > 0) {
+        
+        // Draw layer avec couleur dynamique
+        if (GeoflowAnnotations.getDrawnCount() > 0 && GeoflowLayers.activeLayerIds.has('user-draw')) {
+            const drawItem = document.querySelector('[data-layer="user-draw"]');
+            const color = drawItem ? (drawItem.dataset.color || '#2563eb') : '#2563eb';
+            
             items.push({
                 symbol: 'polygon',
-                color: '#2563eb',
-                label: 'Dessin utilisateur'
+                color: color,
+                label: `Dessins (${GeoflowAnnotations.getDrawnCount()})`
             });
         }
 
-        if (importCount > 0) {
+        // Import layer avec couleur dynamique
+        if (GeoflowAnnotations.getImportedCount() > 0 && GeoflowLayers.activeLayerIds.has('user-import')) {
+            const importItem = document.querySelector('[data-layer="user-import"]');
+            const color = importItem ? (importItem.dataset.color || '#10b981') : '#10b981';
+            
             items.push({
                 symbol: 'polygon',
-                color: '#10b981',
-                label: 'Import utilisateur'
+                color: color,
+                label: `Imports (${GeoflowAnnotations.getImportedCount()})`
             });
         }
 
-        return items.length > 0 ? [{
-            title: 'Annotations',
-            items: items
-        }] : [];
-    },
+        // Retourner un seul bloc "Annotations" avec tous les items
+        if (items.length > 0) {
+            return [{
+                title: 'Annotations',
+                items: items
+            }];
+        }
 
-    /**
-     * Get legend data from measure module
-     * @returns {Array} Array of legend sections
-     */
-    getMeasureLegend() {
         return [];
     },
 
     /**
      * Collect all legend data from registered sources
-     * @returns {Array} Consolidated array of legend sections
      */
     collectLegendData() {
         const allSections = [];
@@ -163,14 +144,12 @@ const GeoflowLegend = {
 
     /**
      * Generate HTML for a legend section
-     * AMÉLIORATION: Support des images de légende
      */
     generateSectionHTML(section) {
         return `
             <div class="legend-layer">
                 <div class="legend-layer-name">${section.title}</div>
                 ${section.items.map(item => {
-                    // Support pour les images de légende (WMS GetLegendGraphic)
                     if (item.symbol === 'image' && item.imageUrl) {
                         return `
                             <div class="legend-item" style="flex-direction: column; align-items: flex-start; padding: 4px 0;">
@@ -185,7 +164,6 @@ const GeoflowLegend = {
                         `;
                     }
                     
-                    // Support standard pour les symboles classiques
                     return `
                         <div class="legend-item">
                             <div class="legend-symbol ${item.symbol}" style="background-color: ${item.color}"></div>
@@ -268,7 +246,6 @@ const GeoflowLegend = {
 
     /**
      * Request legend update (to be called by other modules)
-     * This triggers a custom event that the legend module listens to
      */
     requestUpdate() {
         document.dispatchEvent(new CustomEvent('geoflow:legend-update'));
@@ -276,33 +253,13 @@ const GeoflowLegend = {
 
     /**
      * Get legend data for export (print/PDF)
-     * AMÉLIORATION: Traitement spécial pour les légendes d'images
      */
     getExportData() {
-        const sections = this.collectLegendData();
-        
-        // Pour l'export, on peut transformer les images en texte simple
-        // ou garder l'URL de l'image pour un traitement ultérieur
-        return sections.map(section => ({
-            ...section,
-            items: section.items.map(item => {
-                if (item.symbol === 'image' && item.imageUrl) {
-                    // Pour l'export, on peut soit:
-                    // 1. Garder l'URL pour télécharger l'image plus tard
-                    // 2. Ou la transformer en symbole simple
-                    return {
-                        ...item,
-                        needsImageFetch: true // Flag pour indiquer qu'il faut récupérer l'image
-                    };
-                }
-                return item;
-            })
-        }));
+        return this.collectLegendData();
     },
 
     /**
      * Check if legend has content
-     * @returns {boolean} True if legend has at least one section
      */
     hasContent() {
         return this.collectLegendData().length > 0;

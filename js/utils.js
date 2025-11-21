@@ -12,14 +12,12 @@ const GeoflowUtils = {
         const loading = document.getElementById('loading');
         
         if (loading) {
-            // Update message if loading already exists
             const loadingText = loading.querySelector('.loading-text');
             if (loadingText) {
                 loadingText.textContent = message;
             }
             loading.classList.add('active');
         } else {
-            // Create loading overlay if it doesn't exist
             const loadingDiv = document.createElement('div');
             loadingDiv.id = 'loading';
             loadingDiv.className = 'active';
@@ -68,7 +66,6 @@ const GeoflowUtils = {
      * @param {string} message - The message to display
      */
     showLoadingOverlay(message = 'Traitement en cours...') {
-        // Remove existing overlay if any
         this.hideLoadingOverlay();
         
         const overlay = document.createElement('div');
@@ -132,12 +129,17 @@ const GeoflowUtils = {
     },
 
     /**
-     * Show toast notification
+     * Show toast notification - FIXED VERSION
      * @param {string} message - The message to display
      * @param {string} type - Type of toast (success, error, warning, info)
      */
     showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
+        if (!container) {
+            console.error('Toast container not found');
+            return;
+        }
+
         const icons = {
             success: 'circle-check',
             error: 'circle-xmark',
@@ -153,7 +155,7 @@ const GeoflowUtils = {
         };
 
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
+        toast.className = `toast toast-${type} show`;  // AJOUT DE "show"
         toast.innerHTML = `
             <i class="fa-solid fa-${icons[type]} toast-icon" style="color: ${colors[type]}"></i>
             <div class="toast-message">${message}</div>
@@ -161,9 +163,9 @@ const GeoflowUtils = {
         
         container.appendChild(toast);
         
+        // Auto remove after 3s
         setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(400px)';
+            toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     },

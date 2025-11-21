@@ -1,0 +1,89 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 1,
+        "name": "Place de la Comédie",
+        "type": "Monument",
+        "description": "Place emblématique de Montpellier"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [3.8767, 43.6108]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 2,
+        "name": "Musée Fabre",
+        "type": "Culture",
+        "description": "Musée d'art reconnu internationalement"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [3.8738, 43.6119]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 3,
+        "name": "Arc de Triomphe",
+        "type": "Monument",
+        "description": "Monument historique de la ville"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [3.8720, 43.6097]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 4,
+        "name": "Jardin des Plantes",
+        "type": "Parc",
+        "description": "Plus ancien jardin botanique de France"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [3.8720, 43.6142]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 5,
+        "name": "Zoo de Lunaret",
+        "type": "Loisirs",
+        "description": "Parc zoologique gratuit"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [3.8597, 43.6205]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 6,
+        "name": "Gare Saint-Roch",
+        "type": "Transport",
+        "description": "Gare ferroviaire principale"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [3.8942, 43.6047]
+      }
+    }
+  ]
+}

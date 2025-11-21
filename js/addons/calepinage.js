@@ -809,7 +809,22 @@ const GeoflowCalepinage = {
             return;
         }
 
-        const drawnLayers = GeoflowDraw.drawnItems.getLayers();
+        // Récupérer les layers depuis le bon endroit
+        let drawnLayers = [];
+        
+        // Si annotations existe, chercher dans drawLayerGroup ET importLayerGroup
+        if (typeof GeoflowAnnotations !== 'undefined') {
+            if (GeoflowAnnotations.drawLayerGroup) {
+                drawnLayers = [...drawnLayers, ...GeoflowAnnotations.drawLayerGroup.getLayers()];
+            }
+            if (GeoflowAnnotations.importLayerGroup) {
+                drawnLayers = [...drawnLayers, ...GeoflowAnnotations.importLayerGroup.getLayers()];
+            }
+        } else {
+            // Fallback sur drawnItems classique
+            drawnLayers = GeoflowDraw.drawnItems.getLayers();
+        }
+        
         if (drawnLayers.length === 0) {
             GeoflowUtils.showToast('Dessinez d\'abord une zone sur la carte', 'warning');
             return;
